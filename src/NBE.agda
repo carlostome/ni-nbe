@@ -10,6 +10,9 @@ module NBE (Pre : RB.Preorder 0ℓ 0ℓ 0ℓ)where
   ⊑-refl  = RB.Preorder.refl Pre
   ⊑-trans = RB.Preorder.trans Pre
 
+  open import Relation.Binary.PropositionalEquality hiding (subst) renaming (trans to ≡-trans; sym to ≡-sym; refl to ≡-refl)
+  open import Relation.Binary.PropositionalEquality.Extra
+
   module TypeModule where
 
     data Type  : Set where
@@ -39,17 +42,39 @@ module NBE (Pre : RB.Preorder 0ℓ 0ℓ 0ℓ)where
       drop : ∀ {T Γ Δ} → Γ ⊆ Δ → (Γ `, T) ⊆ Δ
 
     -- Weakenings are a preorder relation
-    ⊆-refl : RB.Reflexive _⊆_
-    ⊆-refl {Ø}      = base
-    ⊆-refl {Γ `, T} = keep ⊆-refl
+    idₑ : ∀ {Γ} → Γ ⊆ Γ
+    idₑ {Ø}      = base
+    idₑ {Γ `, T} = keep idₑ
 
-    ⊆-trans : RB.Transitive _⊆_
-    ⊆-trans base q = q
-    ⊆-trans (keep p) (keep q) = keep (⊆-trans p q)
-    ⊆-trans (keep p) (drop q) = drop (⊆-trans p q)
-    ⊆-trans (drop p) q        = drop (⊆-trans p q)
+    _∘ₑ_ : ∀ {Γ Δ Σ} → Δ ⊆ Γ → Σ ⊆ Δ → Σ ⊆ Γ
+    e₁ ∘ₑ base    = e₁
+    keep e₁ ∘ₑ keep e₂ = keep (e₁ ∘ₑ e₂)
+    drop e₁ ∘ₑ keep e₂ = drop (e₁ ∘ₑ e₂)
+    e₁ ∘ₑ drop e₂      = drop (e₁ ∘ₑ e₂)
 
   open Weakening public
+
+  module WeakeningProperties where
+
+    idlₑ : ∀ {Γ Δ} → (e : Γ ⊆ Δ) → idₑ ∘ₑ e ≡ e
+    idlₑ base     = ≡-refl
+    idlₑ (drop e) = cong drop (idlₑ e)
+    idlₑ (keep e) = cong keep (idlₑ e)
+
+    idrₑ : ∀ {Γ Δ} → (e : Γ ⊆ Δ) → e ∘ₑ idₑ ≡ e
+    idrₑ base     = ≡-refl
+    idrₑ (drop e) = cong drop (idrₑ e)
+    idrₑ (keep e) = cong keep (idrₑ e)
+
+    assₑ : ∀ {Γ Δ Σ Ξ} → (e₁ : Δ ⊆ Γ) (e₂ : Σ ⊆ Δ) (e₃ : Ξ ⊆ Σ)
+         → (e₁ ∘ₑ e₂) ∘ₑ e₃ ≡ e₁ ∘ₑ (e₂ ∘ₑ e₃)
+    assₑ e₁        e₂        base      = ≡-refl
+    assₑ e₁        e₂        (drop e₃) = cong drop (assₑ e₁ e₂ e₃)
+    assₑ e₁        (drop e₂) (keep e₃) = cong drop (assₑ e₁ e₂ e₃)
+    assₑ (drop e₁) (keep e₂) (keep e₃) = cong drop (assₑ e₁ e₂ e₃)
+    assₑ (keep e₁) (keep e₂) (keep e₃) = cong keep (assₑ e₁ e₂ e₃)
+
+  open WeakeningProperties public
 
   module Variable where
 
@@ -65,6 +90,18 @@ module NBE (Pre : RB.Preorder 0ℓ 0ℓ 0ℓ)where
 
   open Variable public
 
+  module WeakeningVariableProperties where
+
+    wkenV-∘ₑ : ∀ {τ} {Γ Δ Σ} → (x : τ ∈ Γ) → (e₁ : Σ ⊆ Δ) (e₂ : Δ ⊆ Γ)
+                → wkenV e₁ (wkenV e₂ x) ≡ wkenV (e₂ ∘ₑ e₁) x
+    wkenV-∘ₑ () base base
+    wkenV-∘ₑ x (keep e₁) (drop e₂) = cong su (wkenV-∘ₑ x e₁ e₂)
+    wkenV-∘ₑ x (drop e₁) e₂        = cong su (wkenV-∘ₑ x e₁ e₂)
+    wkenV-∘ₑ ze     (keep e₁) (keep e₂) = ≡-refl
+    wkenV-∘ₑ (su x) (keep e₁) (keep e₂) = cong su (wkenV-∘ₑ x e₁ e₂)
+
+  open WeakeningVariableProperties public
+
   module TermM where
 
     data Term : Type → Ctx → Set where
@@ -78,7 +115,7 @@ module NBE (Pre : RB.Preorder 0ℓ 0ℓ 0ℓ)where
       inl   : ∀ {Γ} {a b} → Term a Γ → Term (a + b) Γ
       inr   : ∀ {Γ} {a b} → Term b Γ → Term (a + b) Γ
       case  : ∀ {Γ} {a b c} → Term (a + b) Γ → Term c (Γ `, a) → Term c (Γ `, b) → Term c Γ
-    
+
     wkenTm : ∀ {a} {Γ Δ} → Γ ⊆ Δ → Term a Δ → Term a Γ
     wkenTm e unit = unit
     wkenTm e (`λ t)    = `λ (wkenTm (keep e) t)
@@ -92,6 +129,23 @@ module NBE (Pre : RB.Preorder 0ℓ 0ℓ 0ℓ)where
     wkenTm e (case t t₁ t₂) = case (wkenTm e t) (wkenTm (keep e) t₁) (wkenTm (keep e) t₂)
 
   open TermM public
+
+  module WeakeningTermProperties where
+
+    wkenTm-∘ₑ : ∀ {τ} {Γ Δ Σ} → (t : Term τ Γ) → (e₁ : Δ ⊆ Γ) (e₂ : Σ ⊆ Δ)
+                → wkenTm e₂ (wkenTm e₁ t) ≡ wkenTm (e₁ ∘ₑ e₂) t
+    wkenTm-∘ₑ unit e₁ e₂ = ≡-refl
+    wkenTm-∘ₑ (`λ t) e₁ e₂     = cong (`λ) (wkenTm-∘ₑ t (keep e₁) (keep e₂))
+    wkenTm-∘ₑ (var x) e₁ e₂    = cong var (wkenV-∘ₑ x e₂ e₁)
+    wkenTm-∘ₑ (t ∙ t₁) e₁ e₂   = cong₂ _∙_ (wkenTm-∘ₑ t e₁ e₂) (wkenTm-∘ₑ t₁ e₁ e₂)
+    wkenTm-∘ₑ (x ↑ t) e₁ e₂    = cong (x ↑_) (wkenTm-∘ₑ t e₁ e₂)
+    wkenTm-∘ₑ (η t) e₁ e₂      = cong η (wkenTm-∘ₑ t e₁ e₂)
+    wkenTm-∘ₑ (t ≫= t₁) e₁ e₂  = cong₂ _≫=_ (wkenTm-∘ₑ t e₁ e₂) (wkenTm-∘ₑ t₁ (keep e₁) (keep e₂))
+    wkenTm-∘ₑ (inl t) e₁ e₂    = cong inl (wkenTm-∘ₑ t e₁ e₂)
+    wkenTm-∘ₑ (inr t) e₁ e₂    = cong inr (wkenTm-∘ₑ t e₁ e₂)
+    wkenTm-∘ₑ (case t t₁ t₂) e₁ e₂ = cong₃ case (wkenTm-∘ₑ t e₁ e₂) (wkenTm-∘ₑ t₁ (keep e₁) (keep e₂))
+                                                   (wkenTm-∘ₑ t₂ (keep e₁) (keep e₂))
+  open WeakeningTermProperties public
 
   module NormalForm where
 
@@ -141,6 +195,24 @@ module NBE (Pre : RB.Preorder 0ℓ 0ℓ 0ℓ)where
 
   open NormalForm public
 
+  module WeakeningNormalFormProperties where
+
+    mutual
+      nat-qNe : ∀ {Γ Δ a} {e : Δ ⊆ Γ} → (n : Ne a Γ) → wkenTm e (qNe n) ≡ qNe (wkenNe e n)
+      nat-qNe (var x) = cong var ≡-refl
+      nat-qNe (n ∙ x) = cong₂ _∙_ (nat-qNe n) (nat-qNf x)
+
+      nat-qNf : ∀ {Γ Δ a} {e : Δ ⊆ Γ} → (n : Nf a Γ) → wkenTm e (qNf n) ≡ qNf (wkenNf e n)
+      nat-qNf unit = ≡-refl
+      nat-qNf (`λ n) = cong `λ (nat-qNf n)
+      nat-qNf (𝕓 x) = nat-qNe x
+      nat-qNf (η n) = cong η (nat-qNf n)
+      nat-qNf (c ↑ t ≫= n) = cong₂ _≫=_ (cong (c ↑_) (nat-qNe t)) (nat-qNf n)
+      nat-qNf (inl n) = cong inl (nat-qNf n)
+      nat-qNf (inr n) = cong inr (nat-qNf n)
+      nat-qNf {e = e} (case n c₁ c₂) = cong₃ case (nat-qNe n) (nat-qNf c₁) (nat-qNf c₂)
+
+  open WeakeningNormalFormProperties public
   open import Data.Product
   open import Data.Unit hiding (_≤_)
   open import Data.Sum
@@ -167,7 +239,7 @@ module NBE (Pre : RB.Preorder 0ℓ 0ℓ 0ℓ)where
 
     _⇒ᴾ_ :  𝒫 → 𝒫 → 𝒫
     In (P ⇒ᴾ Q) Γ             = ∀ {Δ} → Δ ⊆ Γ → P .In Δ → Q .In Δ
-    (P ⇒ᴾ Q) .Wken Γ⊆Δ₁ f Δ⊆Γ = f (⊆-trans Δ⊆Γ  Γ⊆Δ₁)
+    (P ⇒ᴾ Q) .Wken Γ⊆Δ₁ f Δ⊆Γ = f (Γ⊆Δ₁ ∘ₑ Δ⊆Γ)
 
     _+ᴾ_ :  𝒫 → 𝒫 → 𝒫
     In (P +ᴾ Q) Γ    = (In P Γ) ⊎ (In Q Γ)
@@ -303,8 +375,8 @@ module NBE (Pre : RB.Preorder 0ℓ 0ℓ 0ℓ)where
     run𝒟⇒ (return f) e x = mapExp𝒟 f e x
     run𝒟⇒ (branch n c₁ c₂) e x =
       branch (wkenNe e n)
-        (run𝒟⇒ c₁ (keep e) (wken𝒟 (drop ⊆-refl) x))
-        (run𝒟⇒ c₂ (keep e) (wken𝒟 (drop ⊆-refl) x))
+        (run𝒟⇒ c₁ (keep e) (wken𝒟 (drop idₑ) x))
+        (run𝒟⇒ c₂ (keep e) (wken𝒟 (drop idₑ) x))
   run𝒟 {⟨ ℓ ⟩ a} m = run𝒟𝒞 m
     where
     run𝒟𝒞 : 𝒟ᴾ (𝒞ᴾ ℓ ⟦ a ⟧) →∙ (𝒞ᴾ ℓ ⟦ a ⟧)
@@ -324,14 +396,14 @@ module NBE (Pre : RB.Preorder 0ℓ 0ℓ 0ℓ)where
     eval unit _ = tt
     eval {Γ = Γ} (`λ t) γ     = λ e u → eval t (Wken ⟦ Γ ⟧ₑ e γ , u)
     eval (var x) γ            = lookup x γ
-    eval (t ∙ u) γ            = (eval t γ) ⊆-refl (eval u γ)
+    eval (t ∙ u) γ            = (eval t γ) idₑ (eval u γ)
     eval (η t) γ              = return (eval t γ)
-    eval {Γ = Γ} (t ≫= m) γ  = bindExp𝒞 (λ e a → eval m (Wken ⟦ Γ ⟧ₑ e γ , a)) ⊆-refl (eval t γ)
+    eval {Γ = Γ} (t ≫= m) γ  = bindExp𝒞 (λ e a → eval m (Wken ⟦ Γ ⟧ₑ e γ , a)) idₑ (eval t γ)
     eval (c ↑ t) γ            = up𝒞 c (eval t γ)
     eval (inl t) γ            = return (inj₁ (eval t γ))
     eval (inr t) γ            = return (inj₂ (eval t γ))
     eval {a} {Γ} (case {_} {b} {c} t t₁ t₂) {Δ} γ =
-      run𝒟 {a} (mapExp𝒟 match ⊆-refl (eval t γ))
+      run𝒟 {a} (mapExp𝒟 match idₑ (eval t γ))
       where
       match : ((⟦ b ⟧ +ᴾ ⟦ c ⟧) ⇒ᴾ ⟦ a ⟧) .In Δ
       match e (inj₁ x) = eval t₁ ((Wken ⟦ Γ ⟧ₑ e γ) , x)
@@ -342,7 +414,7 @@ module NBE (Pre : RB.Preorder 0ℓ 0ℓ 0ℓ)where
       reifyVal : ∀ {a} → ⟦ a ⟧ →∙ Nfᴾ a
       reifyVal {𝟙} x      = unit
       reifyVal {𝕓} x      = x
-      reifyVal {a ⇒ b} f  = `λ (reifyVal (f (drop ⊆-refl) (reflect {a} (var ze))))
+      reifyVal {a ⇒ b} f  = `λ (reifyVal (f (drop idₑ) (reflect {a} (var ze))))
       reifyVal {⟨ a ⟩ ℓ} m = reifyVal𝒞 m
       reifyVal {a + b}  m = run𝒟Nf (map𝒟 reifySum m)
 
@@ -369,7 +441,7 @@ module NBE (Pre : RB.Preorder 0ℓ 0ℓ 0ℓ)where
 
       idSubst :  ∀ Γ → ⟦ Γ ⟧ₑ .In Γ
       idSubst Ø        = tt
-      idSubst (Γ `, T) = Wken ⟦ Γ ⟧ₑ (drop ⊆-refl) (idSubst Γ) , reflect {T} (var ze)
+      idSubst (Γ `, T) = Wken ⟦ Γ ⟧ₑ (drop idₑ) (idSubst Γ) , reflect {T} (var ze)
 
       reify : ∀{a Γ} → (⟦ Γ ⟧ₑ →∙ ⟦ a ⟧) → Nf a Γ
       reify {a} {Γ} f = reifyVal (f (idSubst Γ))
@@ -386,16 +458,16 @@ module NBE (Pre : RB.Preorder 0ℓ 0ℓ 0ℓ)where
     ⊆-term : ∀ {Γ} → Γ ⊆ Ø
     ⊆-term {Ø} = base
     ⊆-term {Γ `, x} = drop ⊆-term
-    
+
     IsConstTm : ∀ {Γ a} → Term a Γ → Set
     IsConstTm {Γ} {a} t = Σ (Term a Ø) λ t' → wkenTm ⊆-term t' ≡ t
 
     IsConstNf : ∀ {Γ a} → Nf a Γ → Set
     IsConstNf {Γ} {a} n = Σ (Nf a Ø) λ n' → wkenNf ⊆-term n' ≡ n
-    
+
     -- Example: True is a constant
     private
-    
+
       Bool : Type
       Bool = 𝟙 + 𝟙
 
@@ -477,7 +549,7 @@ module NBE (Pre : RB.Preorder 0ℓ 0ℓ 0ℓ)where
     Var-Sec (p `, ()) 𝕓 ze
     Var-Sec (p `, ()) (_ + _) ze
     Var-Sec (p `, (⇒ x)) (⇒ y) ze = Var-Sec (p `, x) y ze
-    Var-Sec (p `, (⟨⟩ q)) (⟨ t ⟩ x) ze = ? -- ⊑-trans q x
+    Var-Sec (p `, (⟨⟩ q)) (⟨ t ⟩ x) ze = {!!} -- ⊑-trans q x
     Var-Sec (p `, x) t (su v) = Var-Sec p t v
 
     -- Neutrals are secure
@@ -519,7 +591,7 @@ module NBE (Pre : RB.Preorder 0ℓ 0ℓ 0ℓ)where
 
     -- 
     Nf-NI p g (⟨ t ⟩ q) (r ↑ x ≫= n) with Ne-Sen p x
-    ... | ⟨⟩ s = inj₂ (⊑-trans ? (⊑-trans r q))
+    ... | ⟨⟩ s = inj₂ (⊑-trans {!!} (⊑-trans r q))
 
     -- 
     Nf-NI p (g + _) (t + _) (inl n) with Nf-NI p g t n
@@ -594,17 +666,17 @@ module NBE (Pre : RB.Preorder 0ℓ 0ℓ 0ℓ)where
       Ø    : Sub Γ Ø
       _`,_ : ∀ {a Δ} → Sub Γ Δ → Term a Γ → Sub Γ (Δ `, a)
 
-    _∘ₑ_ : ∀ {Γ Δ Σ} → Sub Δ Σ → Γ ⊆ Δ → Sub Γ Σ
-    Ø        ∘ₑ δ = Ø
-    (s `, t) ∘ₑ δ = (s ∘ₑ δ) `, wkenTm δ t
+    _ₛ∘ₑ_ : ∀ {Γ Δ Σ} → Sub Δ Σ → Γ ⊆ Δ → Sub Γ Σ
+    Ø        ₛ∘ₑ δ = Ø
+    (s `, t) ₛ∘ₑ δ = (s ₛ∘ₑ δ) `, wkenTm δ t
 
-    _ₑ∘_ : ∀ {Γ Δ Σ} → Δ ⊆ Σ → Sub Γ Δ → Sub Γ Σ
-    base   ₑ∘ s        = s
-    keep e ₑ∘ (s `, t) = (e ₑ∘ s) `, t
-    drop e ₑ∘ (s `, t) = e ₑ∘ s
+    _ₑ∘ₛ_ : ∀ {Γ Δ Σ} → Δ ⊆ Σ → Sub Γ Δ → Sub Γ Σ
+    base   ₑ∘ₛ s        = s
+    keep e ₑ∘ₛ (s `, t) = (e ₑ∘ₛ s) `, t
+    drop e ₑ∘ₛ (s `, t) = e ₑ∘ₛ s
 
     dropˢ : ∀ {a Γ Δ} → Sub Γ Δ → Sub (Γ `, a) Δ
-    dropˢ σ = σ ∘ₑ drop ⊆-refl
+    dropˢ σ = σ ₛ∘ₑ drop idₑ
 
     keepˢ : ∀ {Γ Δ} {a} → Sub Γ Δ → Sub (Γ `, a) (Δ `, a)
     keepˢ σ = dropˢ σ `, var ze
@@ -615,14 +687,14 @@ module NBE (Pre : RB.Preorder 0ℓ 0ℓ 0ℓ)where
     ⌜ keep σ ⌝ᵒᵖᵉ = keepˢ ⌜ σ ⌝ᵒᵖᵉ
 
     -- Action on ∈ and Tm
-    ∈ : ∀ {Γ Δ} {a} → Sub Γ Δ → a ∈ Δ → Term a Γ
-    ∈ (s `, t) ze     = t
-    ∈ (s `, x) (su e) = ∈ s e
+    ∈ₛ : ∀ {Γ Δ} {a} → Sub Γ Δ → a ∈ Δ → Term a Γ
+    ∈ₛ (s `, t) ze     = t
+    ∈ₛ (s `, x) (su e) = ∈ₛ s e
 
     subst : ∀ {Γ Δ} {a} → Sub Γ Δ → Term a Δ → Term a Γ
     subst s unit = unit
     subst s (`λ t) = `λ (subst (keepˢ s) t)
-    subst s (var x)  = ∈ s x
+    subst s (var x)  = ∈ₛ s x
     subst s (t ∙ u)  = subst s t ∙ subst s u
     subst s (c ↑ t)  = c ↑ subst s t
     subst s (η t)    = η (subst s t)
@@ -632,16 +704,130 @@ module NBE (Pre : RB.Preorder 0ℓ 0ℓ 0ℓ)where
     subst s (case t t₁ t₂) = case (subst s t) (subst (keepˢ s) t₁) (subst (keepˢ s) t₂)
 
     -- Identity and composition
-    id : ∀ {Γ} → Sub Γ Γ
-    id {Ø}     = Ø
-    id {Γ `, a} = keepˢ id
+    idₛ : ∀ {Γ} → Sub Γ Γ
+    idₛ {Ø}      = Ø
+    idₛ {Γ `, a} = keepˢ idₛ
 
-    _∘_ : ∀ {Γ Δ Σ} → Sub Δ Σ → Sub Γ Δ → Sub Γ Σ
-    Ø       ∘ δ  = Ø
-    (s `, t) ∘ δ = (s ∘ δ) `, subst δ t
+    _∘ₛ_ : ∀ {Γ Δ Σ} → Sub Δ Σ → Sub Γ Δ → Sub Γ Σ
+    Ø       ∘ₛ δ  = Ø
+    (s `, t) ∘ₛ δ = (s ∘ₛ δ) `, subst δ t
+
+    module SubstitutionProperties where
+
+      idlₛ : ∀ {Γ Δ} → (σ : Sub Γ Δ) → idₛ ∘ₛ σ ≡ σ
+      idlₛ Ø        = ≡-refl
+      idlₛ (σ `, x) = {!!}
+
+      idrₛ : ∀ {Γ Δ} → (σ : Sub Γ Δ) → σ ∘ₛ idₛ ≡ σ
+
+      assₛ : ∀ {Γ Δ Σ Ξ} → (σ₁ : Sub Δ Γ) (σ₂ : Sub Σ Δ) (σ₃ : Sub Ξ Σ)
+          → (σ₁ ∘ₛ σ₂) ∘ₛ σ₃ ≡ σ₁ ∘ₛ (σ₂ ∘ₛ σ₃)
+
+    open SubstitutionProperties public
+
+    open import Relation.Binary.PropositionalEquality hiding (subst)
+
+    assₛₑₑ : ∀ {Γ Δ Σ Ξ} (σ : Sub Δ Γ) (e₁ : Σ ⊆ Δ) (e₂ : Ξ ⊆ Σ)
+          → (σ ₛ∘ₑ e₁) ₛ∘ₑ e₂ ≡ σ ₛ∘ₑ (e₁ ∘ₑ e₂)
+    assₛₑₑ Ø e₁ e₂        = refl
+    assₛₑₑ (σ `, x) e₁ e₂ = cong₂ _`,_ (assₛₑₑ σ e₁ e₂) (wkenTm-∘ₑ x e₁ e₂)
+
+    assₑₛₑ : ∀ {Γ Δ Σ Ξ} (σ : Sub Δ Γ) (e₁ : Γ ⊆ Σ) (e₂ : Ξ ⊆ Δ)
+          → (e₁ ₑ∘ₛ σ) ₛ∘ₑ e₂ ≡ e₁ ₑ∘ₛ (σ ₛ∘ₑ e₂)
+    assₑₛₑ Ø base e₂             = ≡-refl
+    assₑₛₑ (σ `, x) (keep e₁) e₂ = cong (_`, wkenTm e₂ x) (assₑₛₑ σ e₁ e₂)
+    assₑₛₑ (σ `, x) (drop e₁) e₂ = assₑₛₑ σ e₁ e₂
+
+    ∈ₛ-ₛ∘ₑ : ∀ {τ} {Γ Δ Σ} → (x : τ ∈ Γ) → (σ : Sub Δ Γ) → (e : Σ ⊆ Δ)
+          → ∈ₛ (σ ₛ∘ₑ e) x ≡ wkenTm e (∈ₛ σ x)
+    ∈ₛ-ₛ∘ₑ ze (σ `, t) e     = refl
+    ∈ₛ-ₛ∘ₑ (su x) (σ `, t) e = ∈ₛ-ₛ∘ₑ x σ e
+
+    ∈ₛ-ₑ∘ₛ : ∀ {τ} {Γ Δ Σ} → (x : τ ∈ Γ) → (σ : Sub Σ Δ) → (e : Δ ⊆ Γ)
+          → ∈ₛ (e ₑ∘ₛ σ) x ≡ ∈ₛ σ (wkenV e x)
+    ∈ₛ-ₑ∘ₛ x      (σ `, t) (drop e) = ∈ₛ-ₑ∘ₛ x σ e
+    ∈ₛ-ₑ∘ₛ ze     (σ `, t) (keep e) = refl
+    ∈ₛ-ₑ∘ₛ (su x) (σ `, t) (keep e) = ∈ₛ-ₑ∘ₛ x σ e
+
+    private
+      lemma : ∀ {τ} {Γ Δ Σ} → (σ : Sub Δ Γ) (e : Σ ⊆ Δ)
+            → dropˢ {τ} (σ ₛ∘ₑ e) ≡ (dropˢ σ ₛ∘ₑ keep e)
+      lemma σ e = trans (assₛₑₑ σ e (drop idₑ)) (trans (cong (σ ₛ∘ₑ_)
+                        (cong drop (trans (idrₑ e) (sym (idlₑ e)))))
+                        (sym (assₛₑₑ σ (drop idₑ) (keep e))))
+
+    Term-ₛ∘ₑ : ∀ {τ} {Γ Δ Σ} → (t : Term τ Γ) (σ : Sub Δ Γ) (e : Σ ⊆ Δ)
+            → subst (σ ₛ∘ₑ e) t ≡ wkenTm e (subst σ t)
+    Term-ₛ∘ₑ unit σ e = refl
+    Term-ₛ∘ₑ {τ} {Γ} {Δ} {Σ} (`λ t) σ e =
+      cong `λ (trans (cong (λ s → subst (s `, var ze) t) (lemma σ e))
+              (Term-ₛ∘ₑ t (keepˢ σ) (keep e)))
+    Term-ₛ∘ₑ (var x) σ e  = (∈ₛ-ₛ∘ₑ x σ e)
+    Term-ₛ∘ₑ (t ∙ t₁) σ e = cong₂ _∙_ (Term-ₛ∘ₑ t σ e) (Term-ₛ∘ₑ t₁ σ e)
+    Term-ₛ∘ₑ (x ↑ t) σ e  = cong (x ↑_) (Term-ₛ∘ₑ t σ e)
+    Term-ₛ∘ₑ (η t) σ e    = cong η (Term-ₛ∘ₑ t σ e)
+    Term-ₛ∘ₑ (t ≫= t₁) σ e =
+      cong₂ _≫=_ (Term-ₛ∘ₑ t σ e)
+                  (trans (cong (λ s → subst (s `, var ze) t₁) (lemma σ e))
+                         (Term-ₛ∘ₑ t₁ (keepˢ σ) (keep e)))
+    Term-ₛ∘ₑ (inl t) σ e = cong inl (Term-ₛ∘ₑ t σ e)
+    Term-ₛ∘ₑ (inr t) σ e = cong inr (Term-ₛ∘ₑ t σ e)
+    Term-ₛ∘ₑ (case t t₁ t₂) σ e =
+      cong₃ case (Term-ₛ∘ₑ t σ e)
+                 ((trans (cong (λ s → subst (s `, var ze) t₁) (lemma σ e))
+                         (Term-ₛ∘ₑ t₁ (keepˢ σ) (keep e))))
+                 ((trans (cong (λ s → subst (s `, var ze) t₂) (lemma σ e))
+                         (Term-ₛ∘ₑ t₂ (keepˢ σ) (keep e))))
+
+    Term-ₑ∘ₛ : ∀ {τ} {Γ Δ Σ} → (t : Term τ Γ) (σ : Sub Σ Δ) (e : Δ ⊆ Γ)
+            → subst (e ₑ∘ₛ σ) t ≡ subst σ (wkenTm e t)
+    Term-ₑ∘ₛ unit σ e    = refl
+    Term-ₑ∘ₛ (`λ t) σ e  = cong `λ
+      (≡-trans (cong (λ s → subst (s `, var ze) t) (assₑₛₑ σ e (drop idₑ)))
+               (Term-ₑ∘ₛ t (keepˢ σ) (keep e)))
+    Term-ₑ∘ₛ (var x) σ e  = ∈ₛ-ₑ∘ₛ x σ e
+    Term-ₑ∘ₛ (t ∙ t₁) σ e = cong₂ _∙_ (Term-ₑ∘ₛ t σ e) (Term-ₑ∘ₛ t₁ σ e)
+    Term-ₑ∘ₛ (x ↑ t) σ e  = cong (x ↑_) (Term-ₑ∘ₛ t σ e)
+    Term-ₑ∘ₛ (η t) σ e    = cong η (Term-ₑ∘ₛ t σ e)
+    Term-ₑ∘ₛ (t ≫= t₁) σ e = cong₂ _≫=_
+      (Term-ₑ∘ₛ t σ e) (trans (cong (λ s → subst (s `, var ze) t₁) (assₑₛₑ σ e (drop idₑ)))
+                      (Term-ₑ∘ₛ t₁ (keepˢ σ) (keep e)))
+    Term-ₑ∘ₛ (inl t) σ e = cong inl (Term-ₑ∘ₛ t σ e)
+    Term-ₑ∘ₛ (inr t) σ e = cong inr (Term-ₑ∘ₛ t σ e)
+    Term-ₑ∘ₛ (case t t₁ t₂) σ e = cong₃ case (Term-ₑ∘ₛ t σ e)
+      (trans (cong (λ s → subst (s `, var ze) t₁) (assₑₛₑ σ e (drop idₑ)))
+             (Term-ₑ∘ₛ t₁ (keepˢ σ) (keep e)))
+      (trans (cong (λ s → subst (s `, var ze) t₂) (assₑₛₑ σ e (drop idₑ)))
+             (Term-ₑ∘ₛ t₂ (keepˢ σ) (keep e)))
+
+    idlₑₛ : ∀ {Γ Δ} → (σ : Sub Δ Γ) → idₑ ₑ∘ₛ σ ≡ σ
+    idlₑₛ Ø        = refl
+    idlₑₛ (σ `, x) = cong (_`, x) (idlₑₛ σ)
+
+    idlₛₑ : ∀ {Γ Δ} → (e : Δ ⊆ Γ) → (idₛ ₛ∘ₑ e) ≡ ⌜ e ⌝ᵒᵖᵉ
+    idlₛₑ base     = refl
+    idlₛₑ (keep e) =
+      cong (_`, var ze)
+           (≡-trans (assₛₑₑ idₛ (drop idₑ) (keep e))
+                    (≡-trans (cong (λ e → (idₛ ₛ∘ₑ drop e)) (trans (idlₑ e)
+                                                                  (≡-sym (idrₑ e))))
+                             (≡-trans (≡-sym (assₛₑₑ idₛ e (drop idₑ)))
+                                      (cong (_ₛ∘ₑ drop idₑ) (idlₛₑ e)) )))
+    idlₛₑ (drop e) =
+      trans (cong (λ e → idₛ ₛ∘ₑ drop e)
+                  (≡-sym (idrₑ e)))
+            (trans (≡-sym (assₛₑₑ idₛ e (drop idₑ)))
+                   (cong dropˢ (idlₛₑ e)))
+
+    idrₛₑ : ∀ {Γ Δ} → (e : Δ ⊆ Γ) → (e ₑ∘ₛ idₛ) ≡ ⌜ e ⌝ᵒᵖᵉ
+    idrₛₑ = {!!}
+
+    Term-∘ₛ : ∀ {a} {Γ Δ Σ} → (t : Term a Γ) → (σ₁ : Sub Δ Γ) → (σ₂ : Sub Σ Δ)
+            → subst (σ₁ ∘ₛ σ₂) t ≡ subst σ₂ (subst σ₁ t)
+    Term-∘ₛ = {!!}
 
   open Substitution
-  
+
   module Conversion where
 
     open import Function using (_∋_)
@@ -650,10 +836,10 @@ module NBE (Pre : RB.Preorder 0ℓ 0ℓ 0ℓ)where
 
       -- λ/ reduction
       ⇒β-≈      : ∀ {a b} → {t : Term b (Γ `, a)} {u : Term a Γ}
-                → ((`λ t) ∙ u) ≈ subst (id `, u) t
+                → ((`λ t) ∙ u) ≈ subst (idₛ `, u) t
 
       ⇒η-≈      : ∀ {a b} → {t : Term (a ⇒ b) Γ}
-                → t  ≈ `λ (wkenTm (drop ⊆-refl) t ∙ (var ze))
+                → t  ≈ `λ (wkenTm (drop idₑ) t ∙ (var ze))
 
       -- λ/ congruence
       ∙-≈ : ∀ {a b} {f f′ : Term (a ⇒ b) Γ} {u u′ : Term a Γ}
@@ -665,9 +851,9 @@ module NBE (Pre : RB.Preorder 0ℓ 0ℓ 0ℓ)where
           → t ≈ t′
           → (`λ t) ≈ (`λ t′)
 
-      -- Monad laws 
+      -- Monad laws
       ⟨⟩β-≈     : ∀ {a b} {ℓ} → {x : Term a Γ} {f : Term (⟨ ℓ ⟩ b) (Γ `, a)}
-                → (η x ≫= f) ≈ subst (id `, x) f
+                → (η x ≫= f) ≈ subst (idₛ `, x) f
 
       ⟨⟩η-≈     : ∀ {a} {ℓ} → {t : Term (⟨ ℓ ⟩ a) Γ}
                 → t ≈ (t ≫= η (var ze))
@@ -675,13 +861,14 @@ module NBE (Pre : RB.Preorder 0ℓ 0ℓ 0ℓ)where
       ⟨⟩γ-≈     : ∀ {a b c} {ℓ} → {t₁ : Term (⟨ ℓ ⟩ a) Γ}
                                   {t₂ : Term (⟨ ℓ ⟩ b) (Γ `, a)}
                                   {t₃ : Term (⟨ ℓ ⟩ c) (Γ `, b)}
-                → (t₁ ≫= (t₂ ≫= wkenTm (keep (drop ⊆-refl)) t₃)) ≈ ((t₁ ≫= t₂) ≫= t₃)
+               → ((t₁ ≫= t₂) ≫= t₃) ≈ (t₁ ≫= (t₂ ≫= wkenTm (keep (drop idₑ)) t₃))
 
       -- Up laws
 
       ↑γ₁-≈ : ∀ {a} {ℓᴸ ℓᴴ} → {t : Term a Γ} {p : ℓᴸ ⊑ ℓᴴ}
                 → (p ↑ η t) ≈ η t
-      ↑γ₂-≈ : ∀ {a b} {ℓᴸ ℓᴴ} → {t₁ : Term (⟨ ℓᴸ ⟩ a) Γ} {t₂ : Term (⟨ ℓᴸ ⟩ (⟨ ℓᴸ ⟩ b)) (Γ `, a)} {p : ℓᴸ ⊑ ℓᴴ} 
+      ↑γ₂-≈ : ∀ {a b} {ℓᴸ ℓᴴ} → {t₁ : Term (⟨ ℓᴸ ⟩ a) Γ} {t₂ : Term (⟨ ℓᴸ ⟩ (⟨ ℓᴸ ⟩ b)) (Γ `, a)}
+                               {p : ℓᴸ ⊑ ℓᴴ} 
                 → (p ↑ (t₁ ≫= t₂)) ≈ ((p ↑ t₁) ≫= (p ↑ t₂))
 
 
@@ -721,6 +908,37 @@ module NBE (Pre : RB.Preorder 0ℓ 0ℓ 0ℓ)where
       ≈-sym   : ∀ {a} {t t′ : Term a Γ}               → t ≈ t′ → t′ ≈ t
       ≈-trans : ∀ {a} {t t′ t′′ : Term a Γ}           → t ≈ t′ → t′ ≈ t′′ → t ≈ t′′
 
+    ≡⇒≈ : ∀ {a} {Γ} {t₁ t₂ : Term a Γ} → t₁ ≡ t₂ → t₁ ≈ t₂
+    ≡⇒≈ ≡-refl = ≈-refl
+
+-- subst σ (subst (idₛ `, u) t)
+    -- cong-≈ : ∀ {Γ Δ} {a} {σ₁ σ₂ : Sub Δ Γ} → {t₁ t₂ : Term a Γ} → t₁ ≈ t₂ → subst σ₁ t₁ ≈  subst σ₂ t₂
+    -- cong-≈ {σ₁ = σ} (⇒β-≈ {t = t} {u = u})
+    --   = ≈-trans ⇒β-≈
+    --      (≈-trans
+    --         (≈-trans
+    --            (≡⇒≈ (≡-sym (Term-∘ₛ t (keepˢ σ) (idₛ `, subst σ u))))
+    --            -- (cong-≈ (cong (λ s → s `, subst σ u) (≡-trans {!!} {!sym (idrₛₑ ?)!}))
+    --            --         (≈-refl {t = t})))
+    --         (≡⇒≈ (Term-∘ₛ t (idₛ `, u) σ)))
+    -- cong-≈ = {!!}
+    -- cong-≈ ⇒η-≈ = {!!}
+    -- cong-≈ (∙-≈ x x₁) = ∙-≈ (cong-≈ x) (cong-≈ x₁)
+    -- cong-≈ (λ-≈ x) = λ-≈ (cong-≈ x)
+    -- cong-≈ ⟨⟩β-≈ = {!!}
+    -- cong-≈ ⟨⟩η-≈ = ⟨⟩η-≈
+    -- cong-≈ ⟨⟩γ-≈ = {!!}
+    -- cong-≈ ↑γ₁-≈ = ↑γ₁-≈
+    -- cong-≈ ↑γ₂-≈ = ↑γ₂-≈
+    -- cong-≈ (η-≈ x) = η-≈ (cong-≈ x)
+    -- cong-≈ (≫=-≈ x x₁) = ≫=-≈ (cong-≈ x) (cong-≈ x₁)
+    -- cong-≈ (↑-≈ x) = ↑-≈ (cong-≈ x)
+    -- cong-≈ (inl-≈ x) = inl-≈ (cong-≈ x)
+    -- cong-≈ (inr-≈ x) = inr-≈ (cong-≈ x)
+    -- cong-≈ (case-≈ x x₁ x₂) = case-≈ (cong-≈ x) (cong-≈ x₁) (cong-≈ x₂)
+    -- cong-≈ ≈-refl = ≈-refl
+    -- cong-≈ (≈-sym x) = ≈-sym (cong-≈ x)
+    -- cong-≈ (≈-trans x x₁) = ≈-trans (cong-≈ x) (cong-≈ x₁)
   open Conversion public
 
 
@@ -728,26 +946,48 @@ module NBE (Pre : RB.Preorder 0ℓ 0ℓ 0ℓ)where
 
     open import Data.Product
 
+    -- weakening preserves ≈
     inv-wken : ∀ {a} {Γ} {t₁ t₂ : Term a Γ}
                  {Δ : Ctx} {e : Δ ⊆ Γ}
              → t₁ ≈ t₂
              → wkenTm e t₁ ≈ wkenTm e t₂
-    inv-wken ⇒β-≈ = {!!}
-    inv-wken ⇒η-≈ = {!!}
+    inv-wken {e = e} (⇒β-≈ {t = t} {u = u})
+      = ≈-trans ⇒β-≈ (≡⇒≈ (≡-trans (≡-trans (≡-sym (Term-ₑ∘ₛ t (idₛ `, wkenTm e u) (keep e)))
+                                            (cong (λ s → subst (s `, wkenTm e u) t)
+                                                  (≡-trans (idrₛₑ e) (≡-sym (idlₛₑ e)))))
+                        (Term-ₛ∘ₑ t (idₛ `, u) e)))
+    inv-wken {e = e} (⇒η-≈ {t = t₁})
+      = ≈-trans ⇒η-≈ (≡⇒≈ (cong (λ f → `λ (f ∙ var ze))
+                                (≡-trans (wkenTm-∘ₑ t₁ e (drop idₑ))
+                                (≡-trans ((cong (λ e → wkenTm (drop e) t₁)
+                                                (≡-trans (idrₑ e) (≡-sym (idlₑ e)))))
+                                         (≡-sym (wkenTm-∘ₑ t₁ (drop idₑ) (keep e)))))))
     inv-wken (∙-≈ x x₁) = ∙-≈ (inv-wken x) (inv-wken x₁)
-    inv-wken (λ-≈ x) = λ-≈ (inv-wken x)
-    inv-wken ⟨⟩β-≈ = {!!}
-    inv-wken ⟨⟩η-≈ = ⟨⟩η-≈
-    inv-wken ⟨⟩γ-≈ = {!!}
-    inv-wken (η-≈ x) = η-≈ (inv-wken x)
+    inv-wken (λ-≈ x)    = λ-≈ (inv-wken x)
+    inv-wken {e = e} (⟨⟩β-≈ {x = x} {f = f})
+      = ≈-trans ⟨⟩β-≈ (≡⇒≈ (≡-trans (≡-trans (≡-sym (Term-ₑ∘ₛ f (idₛ `, wkenTm e x) (keep e)))
+                                            (cong (λ s → subst (s `, wkenTm e x) f)
+                                                  (≡-trans (idrₛₑ e) (≡-sym (idlₛₑ e)))))
+                          (Term-ₛ∘ₑ f (idₛ `, x) e)))
+    inv-wken ⟨⟩η-≈       = ⟨⟩η-≈
+    inv-wken {e = e} (⟨⟩γ-≈ {t₁ = t₁} {t₂ = t₂} {t₃ = t₃})
+      = ≈-trans ⟨⟩γ-≈ (≡⇒≈ (cong (λ k → wkenTm e t₁ ≫= (wkenTm (keep e) t₂ ≫= k))
+                                (≡-trans (wkenTm-∘ₑ t₃ (keep e) (keep (drop idₑ)))
+                                         (≡-trans (cong (λ e → wkenTm (keep (drop e)) t₃)
+                                                  (≡-trans (idrₑ e) (≡-sym (idlₑ e))))
+                                                  (≡-sym (wkenTm-∘ₑ t₃ (keep (drop idₑ))
+                                                                      (keep (keep e))))))))
+    inv-wken ↑γ₁-≈      = ↑γ₁-≈
+    inv-wken ↑γ₂-≈      = ↑γ₂-≈
+    inv-wken (η-≈ x)    = η-≈ (inv-wken x)
     inv-wken (≫=-≈ x x₁) = ≫=-≈ (inv-wken x) (inv-wken x₁)
-    inv-wken (↑-≈ x) = ↑-≈ (inv-wken x)
+    inv-wken (↑-≈ x)   = ↑-≈ (inv-wken x)
     inv-wken (inl-≈ x) = inl-≈ (inv-wken x)
     inv-wken (inr-≈ x) = inr-≈ (inv-wken x)
     inv-wken (case-≈ x x₁ x₂) = case-≈ (inv-wken x) (inv-wken x₁) (inv-wken x₂)
-    inv-wken ≈-refl = ≈-refl
-    inv-wken (≈-sym x) = ≈-sym (inv-wken x)
-    inv-wken (≈-trans x x₁) = ≈-trans (inv-wken x) (inv-wken x₁)
+    inv-wken ≈-refl           = ≈-refl
+    inv-wken (≈-sym x)        = ≈-sym (inv-wken x)
+    inv-wken (≈-trans x x₁)   = ≈-trans (inv-wken x) (inv-wken x₁)
 
     ----------------------
     -- Logical relations
@@ -853,7 +1093,7 @@ module NBE (Pre : RB.Preorder 0ℓ 0ℓ 0ℓ)where
     inv {𝕓} p q =
       ≈-trans (≈-sym p) q
     inv {a ⇒ b}  p q =
-      λ  e r → inv {b} (∙-≈ {!!} ≈-refl) (q e r)
+      λ  e r → inv {b} (∙-≈ (inv-wken p) ≈-refl) (q e r)
     inv {a + b} {v = v} p q =
       inv₊ {v = v} p q
     inv {⟨ ℓ ⟩ a} {v = v} p q =
@@ -863,38 +1103,56 @@ module NBE (Pre : RB.Preorder 0ℓ 0ℓ 0ℓ)where
     -- Weakening preserves relations
     ---------------------------------------------
 
-    wkPresR₊ : ∀ {a b} {Γ Δ} {t :  Term (a + b) Γ}
-             {v : 𝒟 (⟦ a ⟧ +ᴾ ⟦ b ⟧) Γ}  {e : Δ ⊆ Γ}
-        -- need one more argument
-        → R t v
-        → R (wkenTm e t) (wken𝒟 e v)
-    wkPresR₊ {a} {b} {v = return x}       r =
-       {!!}
-    wkPresR₊ {a} {b} {v = branch x v₁ v₂} {e} (t₁ , t₂ , r₁ , r₂ , p) =
-      wkenTm (keep e) t₁
-      , (wkenTm (keep e) t₂)
-      , wkPresR₊ {a} {b} {v = v₁} r₁
-      , wkPresR₊ {a} {b} {v = v₂} r₂
-      , {!!}
+    mutual
+      wkPresR₊ : ∀ {a b} {Γ Δ} {t :  Term (a + b) Γ}
+              {v : 𝒟 (⟦ a ⟧ +ᴾ ⟦ b ⟧) Γ}  {e : Δ ⊆ Γ}
+          → R t v
+          → R (wkenTm e t) (wken𝒟 e v)
+      wkPresR₊ {a} {b} {v = return (inj₁ x)} {e} (t′ , R₊′ , p)
+        = wkenTm e t′ , wkPresR {t = t′} R₊′ ,
+          ≈-trans (inv-wken p) (inl-≈ ≈-refl)
+      wkPresR₊ {a} {b} {v = return (inj₂ y)} {e} (t′ , R₊′ , p)
+        = wkenTm e t′ , wkPresR {t = t′} R₊′ ,
+          ≈-trans (inv-wken p) (inr-≈ ≈-refl)
+      wkPresR₊ {a} {b} {v = branch n v₁ v₂} {e} (t₁ , t₂ , R₊₁ , R₊₂ , p) =
+        wkenTm (keep e) t₁
+        , (wkenTm (keep e) t₂)
+        , wkPresR₊ {a} {b} {v = v₁} R₊₁
+        , wkPresR₊ {a} {b} {v = v₂} R₊₂
+        , ≈-trans (inv-wken p) (≡⇒≈ (cong (λ n′ → case n′ (wkenTm (keep e) t₁) (wkenTm (keep e) t₂))
+                                    {!nat-qNe n!}))
 
-    wkPresR⟨⟩ : ∀ {a} {ℓ} {Γ Δ} {t :  Term (⟨ ℓ ⟩ a) Γ}
-             {v : 𝒞 ⟦ a ⟧ ℓ Γ}  {e : Δ ⊆ Γ}
-        → R t v
-        → R (wkenTm e t) (wken𝒞 e v)
-    wkPresR⟨⟩ r = {!!}
-    
-    wkPresR : ∀ {a} {Γ Δ} {t :  Term a Γ} {v : In ⟦ a ⟧ Γ} {e : Δ ⊆ Γ}
-        → R t v
-        → R (wkenTm e t) (Wken ⟦ a ⟧ e v)
-    wkPresR {𝟙}              r = tt
-    wkPresR {𝕓}              r = {!!}
-    wkPresR {a ⇒ b} {e = e}  r = λ e' vₐ →
-      inv {b}
-        {!!}
-        (r (⊆-trans e' e) vₐ)
-    wkPresR {a + b}  {v = v} r = wkPresR₊ {a} {b} {v = v} r
-    wkPresR {⟨ ℓ ⟩ a} {v = v} r = wkPresR⟨⟩ {a} {ℓ} {v = v} r
-    
+      wkPresR⟨⟩ : ∀ {a} {ℓ} {Γ Δ} {t :  Term (⟨ ℓ ⟩ a) Γ}
+              {v : 𝒞 ⟦ a ⟧ ℓ Γ}  {e : Δ ⊆ Γ}
+          → R t v
+          → R (wkenTm e t) (wken𝒞 e v)
+      wkPresR⟨⟩ {t = t} {return x} {e} (t′ , Rt′ , p)
+        = wkenTm e t′ , wkPresR {t = t′} Rt′ , (inv-wken p)
+      wkPresR⟨⟩ {t = t} {bind c n v} {e} (t′ , R𝒞′ , p)
+            = wkenTm (keep e) t′  , wkPresR⟨⟩ {t = t′} {v = v} {e = keep e} R𝒞′ ,
+              ≈-trans (inv-wken p ) (≡⇒≈ (cong (λ n′ → (c ↑ n′) ≫= wkenTm (keep e) t′)
+                                         (nat-qNe n)))
+      wkPresR⟨⟩ {t = t} {branch n v₁ v₂} {e} (t₁ , t₂ , R𝒞₁ , R𝒞₂ , p)
+        = (wkenTm (keep e) t₁) , (wkenTm (keep e) t₂)
+        , wkPresR⟨⟩ {t = t₁} {v = v₁} {e = keep e} R𝒞₁
+        , wkPresR⟨⟩ {t = t₂} {v = v₂} {e = keep e} R𝒞₂
+        , ≈-trans (inv-wken p) (≡⇒≈ (cong (λ n′ → case n′ (wkenTm (keep e) t₁) (wkenTm (keep e) t₂))
+                                    (nat-qNe n)))
+
+      wkPresR : ∀ {a} {Γ Δ} {t :  Term a Γ} {v : In ⟦ a ⟧ Γ}
+              {e : Δ ⊆ Γ}
+          → R t v
+          → R (wkenTm e t) (Wken ⟦ a ⟧ e v)
+      wkPresR {𝟙}              r = tt
+      wkPresR {𝕓}     {v = v} {e = e}  r = ≈-trans (inv-wken {e = e} r)
+                                                  (≡⇒≈ (nat-qNf v))
+      wkPresR {a ⇒ b} {e = e} r {t = t} =  λ e' vₐ →
+        inv {b}
+          (≡⇒≈ (cong (λ t' → t' ∙ t) (≡-sym (wkenTm-∘ₑ _ e e'))))
+          (r (e ∘ₑ e') vₐ)
+      wkPresR {a + b}  {v = v} r = wkPresR₊ {a} {b} {v = v} r
+      wkPresR {⟨ ℓ ⟩ a} {v = v} r = wkPresR⟨⟩ {a} {ℓ} {v = v} r
+
     ---------------------------------------------
     -- Fundamental theorem of logical relations
     ---------------------------------------------
@@ -940,123 +1198,87 @@ module NBE (Pre : RB.Preorder 0ℓ 0ℓ 0ℓ)where
 
   open Consistency public
 
-  -------------------------------------
-  -- Noninterference theorem for terms
-  -------------------------------------
+  -- -- -------------------------------------
+  -- -- -- Noninterference theorem for terms
+  -- -- -------------------------------------
 
-  open import Relation.Binary.PropositionalEquality hiding (subst)
+  -- -- open import Relation.Binary.PropositionalEquality hiding (subst)
 
-  ≡→≈ :  ∀ {Γ a} → {m n : Nf Γ a} → m ≡ n → qNf m ≈ qNf n
-  ≡→≈ refl = ≈-refl
+  -- -- ≡→≈ :  ∀ {Γ a} → {m n : Nf Γ a} → m ≡ n → qNf m ≈ qNf n
+  -- -- ≡→≈ refl = ≈-refl
 
-  ≡→≈' :  ∀ {Γ a} → {m n : Term Γ a} → m ≡ n → m ≈ n
-  ≡→≈' refl = ≈-refl
-  -- a weaker version of `IsConstTm`
+  -- -- ≡→≈' :  ∀ {Γ a} → {m n : Term Γ a} → m ≡ n → m ≈ n
+  -- -- ≡→≈' refl = ≈-refl
+  -- -- -- a weaker version of `IsConstTm`
 
-  IsConstTm' : ∀ {Γ a} → Term a Γ → Set
-  IsConstTm' {Γ} {a} t = Σ (Term a Ø) λ t' → wkenTm ⊆-term t' ≈ t
-
-  -- Naturality condition of the `qNf` natural transformation
-  -- (should be provable, also required for `consistent` I think)
-  mutual
-    nat-qNe : ∀ {Γ Δ a} {e : Δ ⊆ Γ} → (n : Ne a Γ) → wkenTm e (qNe n) ≡ qNe (wkenNe e n)
-    nat-qNe (var x) = cong var refl
-    nat-qNe (n ∙ x) = cong₂ _∙_ (nat-qNe n) (nat-qNf x)
-
-    nat-qNf : ∀ {Γ Δ a} {e : Δ ⊆ Γ} → (n : Nf a Γ) → wkenTm e (qNf n) ≡ qNf (wkenNf e n)
-    nat-qNf unit = refl
-    nat-qNf (`λ n) = cong `λ (nat-qNf n)
-    nat-qNf (𝕓 x) = nat-qNe x
-    nat-qNf (η n) = cong η (nat-qNf n)
-    nat-qNf (c ↑ t ≫= n) = cong₂ _≫=_ (cong (c ↑_) (nat-qNe t)) (nat-qNf n)
-    nat-qNf (inl n) = cong inl (nat-qNf n)
-    nat-qNf (inr n) = cong inr (nat-qNf n)
-    nat-qNf {e = e} (case n c₁ c₂) with (nat-qNe {e = e} n) | nat-qNf {e = keep e} c₁ | nat-qNf {e = keep e} c₂
-    ... | nn | nc₁ | nc₂ = {!cong !}
+  -- -- IsConstTm' : ∀ {Γ a} → Term a Γ → Set
+  -- -- IsConstTm' {Γ} {a} t = Σ (Term a Ø) λ t' → wkenTm ⊆-term t' ≈ t
 
 
-  IsConstSub : ∀ {Γ} {a} → (t : Term a Γ) → Set
-  IsConstSub {Γ} {a} t = Σ (Term a Ø) λ t' → subst Ø t' ≈ t
 
-  --_∘_ : ∀ {Γ Δ Σ} → Sub Γ Δ →  Sub Δ Σ → Sub Γ Σ
-  -- Ø       ∘ δ  = Ø
-  -- (s `, t) ∘ δ = (s ∘ δ) `, subst δ t
-  substppp : ∀ {Σ Δ Γ} {a} {t : Term a Σ} {σ : Sub Δ Σ} {σ′ : Sub Γ Δ} → subst σ′ (subst σ t) ≈ subst (σ ∘ σ′) t
-  substppp = {!!}
+  -- -- -- IsConstSub : ∀ {Γ} {a} → (t : Term a Γ) → Set
+  -- -- -- IsConstSub {Γ} {a} t = Σ (Term a Ø) λ t' → subst Ø t' ≈ t
 
-  final : ∀ {Γ} → (σ : Sub Γ Ø) → σ ≡ Ø
-  final Ø = refl
+  -- -- -- --_∘_ : ∀ {Γ Δ Σ} → Sub Γ Δ →  Sub Δ Σ → Sub Γ Σ
+  -- -- -- -- Ø       ∘ δ  = Ø
+  -- -- -- -- (s `, t) ∘ δ = (s ∘ δ) `, subst δ t
+  -- -- -- substppp : ∀ {Σ Δ Γ} {a} {t : Term a Σ} {σ : Sub Δ Σ} {σ′ : Sub Γ Δ} → subst σ′ (subst σ t) ≈ subst (σ ∘ σ′) t
+  -- -- -- substppp = {!!}
 
-  cong-≈ : ∀ {Γ Δ} {a} {σ : Sub Δ Γ} → {t₁ t₂ : Term a Γ} → t₁ ≈ t₂ → subst σ t₁ ≈  subst σ t₂
-  cong-≈ ⇒β-≈ = {!!}
-  cong-≈ ⇒η-≈ = {!!}
-  cong-≈ (∙-≈ x x₁) = ∙-≈ (cong-≈ x) (cong-≈ x₁)
-  cong-≈ (λ-≈ x) = λ-≈ (cong-≈ x)
-  cong-≈ ⟨⟩β-≈ = {!!}
-  cong-≈ ⟨⟩η-≈ = ⟨⟩η-≈
-  cong-≈ ⟨⟩γ-≈ = {!!}
-  cong-≈ ↑γ₁-≈ = ↑γ₁-≈
-  cong-≈ ↑γ₂-≈ = ↑γ₂-≈
-  cong-≈ (η-≈ x) = η-≈ (cong-≈ x)
-  cong-≈ (≫=-≈ x x₁) = ≫=-≈ (cong-≈ x) (cong-≈ x₁)
-  cong-≈ (↑-≈ x) = ↑-≈ (cong-≈ x)
-  cong-≈ (inl-≈ x) = inl-≈ (cong-≈ x)
-  cong-≈ (inr-≈ x) = inr-≈ (cong-≈ x)
-  cong-≈ (case-≈ x x₁ x₂) = case-≈ (cong-≈ x) (cong-≈ x₁) (cong-≈ x₂)
-  cong-≈ ≈-refl = ≈-refl
-  cong-≈ (≈-sym x) = ≈-sym (cong-≈ x)
-  cong-≈ (≈-trans x x₁) = ≈-trans (cong-≈ x) (cong-≈ x₁)
-
-  PPPP : ∀ {Δ Γ} {a} (t : Term a Γ) → (p : IsConstSub t) → (σ : Sub Δ Γ) → subst σ t ≈ subst Ø (proj₁ p)
-  PPPP t (t' , pr) σ with cong-≈ {σ = σ} pr
-  ... | a with substppp {t = t'} {σ = Ø} {σ′ = σ}
-  ... | b =  ≈-trans (≈-sym a) b
-
-  -- Ultimate noninterference theorem
-  Tm-NI : ∀ {Γ} {a} {ℓⁱ ℓᵒ}
-      → ⟨ ℓⁱ ⟩ˢᶜ Γ           -- input is atleast ℓⁱ-sensitive
-      → Ground a → Tr a ℓᵒ  -- output is ground, and transparent at ℓᵒ
-      → (t : Term a Γ) → (IsConstTm' t) ⊎ (ℓⁱ ⊑ ℓᵒ)
-  Tm-NI p g q t with Nf-NI p g q (norm t)
-  Tm-NI p g q t | inj₁ (n , r) = inj₁ ((qNf n) ,
-    ≈-sym
-      (≈-trans (consistent _)
-      ((≈-sym
-            (≈-trans
-              ({!!})
-              (≡→≈ r))))))
-  Tm-NI p g q t | inj₂ y = inj₂ y
+  -- -- -- final : ∀ {Γ} → (σ : Sub Γ Ø) → σ ≡ Ø
+  -- -- -- final Ø = refl
 
 
-  Tm-NI' : ∀ {Δ Γ} {a} {ℓⁱ ℓᵒ}
-      → (t : Term a Γ)
-      → (σ : Sub Δ Γ)       -- substitution for part of input which is not sensitive
-      → ⟨ ℓⁱ ⟩ˢᶜ Δ           -- remaining input is atleast ℓⁱ-sensitive
-      → Ground a → Tr a ℓᵒ  -- output is ground, and transparent at ℓᵒ
-      → (IsConstTm' (subst σ t)) ⊎ (ℓⁱ ⊑ ℓᵒ)
-  Tm-NI' t σ s gr tr = Tm-NI s gr tr _
+  -- -- -- PPPP : ∀ {Δ Γ} {a} (t : Term a Γ) → (p : IsConstSub t) → (σ : Sub Δ Γ) → subst σ t ≈ subst Ø (proj₁ p)
+  -- -- -- PPPP t (t' , pr) σ with cong-≈ {σ = σ} pr
+  -- -- -- ... | a with substppp {t = t'} {σ = Ø} {σ′ = σ}
+  -- -- -- ... | b =  ≈-trans (≈-sym a) b
 
-  open import Relation.Nullary
+  -- -- -- -- Ultimate noninterference theorem
+  -- -- -- Tm-NI : ∀ {Γ} {a} {ℓⁱ ℓᵒ}
+  -- -- --     → ⟨ ℓⁱ ⟩ˢᶜ Γ           -- input is atleast ℓⁱ-sensitive
+  -- -- --     → Ground a → Tr a ℓᵒ  -- output is ground, and transparent at ℓᵒ
+  -- -- --     → (t : Term a Γ) → (IsConstTm' t) ⊎ (ℓⁱ ⊑ ℓᵒ)
+  -- -- -- Tm-NI p g q t with Nf-NI p g q (norm t)
+  -- -- -- Tm-NI p g q t | inj₁ (n , r) = inj₁ ((qNf n) ,
+  -- -- --   ≈-sym
+  -- -- --     (≈-trans (consistent _)
+  -- -- --     ((≈-sym
+  -- -- --           (≈-trans
+  -- -- --             ({!!})
+  -- -- --             (≡→≈ r))))))
+  -- -- -- Tm-NI p g q t | inj₂ y = inj₂ y
+
+
+  -- -- -- Tm-NI' : ∀ {Δ Γ} {a} {ℓⁱ ℓᵒ}
+  -- -- --     → (t : Term a Γ)
+  -- -- --     → (σ : Sub Δ Γ)       -- substitution for part of input which is not sensitive
+  -- -- --     → ⟨ ℓⁱ ⟩ˢᶜ Δ           -- remaining input is atleast ℓⁱ-sensitive
+  -- -- --     → Ground a → Tr a ℓᵒ  -- output is ground, and transparent at ℓᵒ
+  -- -- --     → (IsConstTm' (subst σ t)) ⊎ (ℓⁱ ⊑ ℓᵒ)
+  -- -- -- Tm-NI' t σ s gr tr = Tm-NI s gr tr _
+
+  -- -- -- open import Relation.Nullary
   
        
-  -- PPPP : ∀ {Δ Γ} {a} (t : Term a Γ) → (p : IsConstSub t) → (σ : Sub Δ Γ) → subst σ t ≈ subst Ø (proj₁ p)
-  -- PPPP t (t' , pr) σ with cong-≈ {σ = σ} pr
-  -- ... | a with substppp {t = t'} {σ = Ø} {σ′ = σ}
-  -- ... | b =  ≈-trans (≈-sym a) b
+  -- -- -- -- PPPP : ∀ {Δ Γ} {a} (t : Term a Γ) → (p : IsConstSub t) → (σ : Sub Δ Γ) → subst σ t ≈ subst Ø (proj₁ p)
+  -- -- -- -- PPPP t (t' , pr) σ with cong-≈ {σ = σ} pr
+  -- -- -- -- ... | a with substppp {t = t'} {σ = Ø} {σ′ = σ}
+  -- -- -- -- ... | b =  ≈-trans (≈-sym a) b
 
-  postulate assume : ∀ {Γ} {a} → (t : Term a Γ) → IsConstTm' t -> IsConstSub t
+  -- -- -- postulate assume : ∀ {Γ} {a} → (t : Term a Γ) → IsConstTm' t -> IsConstSub t
 
-  NI : ∀ {Δ Γ} {a} {ℓᴸ ℓᴴ}
-         → ¬ (ℓᴴ ⊑ ℓᴸ)
-         → (t    : Term a Γ)
-         → (σ σ′ : Sub Δ Γ)
-         → ⟨ ℓᴴ ⟩ˢᶜ Γ
-         → Ground a → Tr a ℓᴸ
-         → subst σ t ≈ subst σ′ t
-  NI ¬ℓᴴ⊑ℓᴸ t σ σ′ pr gr tr
-    with Tm-NI pr gr tr t
-  NI ¬ℓᴴ⊑ℓᴸ t σ σ′ pr gr tr | inj₁ pp
-    with assume t pp
-  ... | ppp with PPPP t ppp σ | PPPP t ppp σ′
-  ... | a | b = ≈-trans a (≈-sym b )
-  NI ¬ℓᴴ⊑ℓᴸ t σ σ′ pr gr tr | inj₂ y = {!!}
+  -- -- -- NI : ∀ {Δ Γ} {a} {ℓᴸ ℓᴴ}
+  -- -- --        → ¬ (ℓᴴ ⊑ ℓᴸ)
+  -- -- --        → (t    : Term a Γ)
+  -- -- --        → (σ σ′ : Sub Δ Γ)
+  -- -- --        → ⟨ ℓᴴ ⟩ˢᶜ Γ
+  -- -- --        → Ground a → Tr a ℓᴸ
+  -- -- --        → subst σ t ≈ subst σ′ t
+  -- -- -- NI ¬ℓᴴ⊑ℓᴸ t σ σ′ pr gr tr
+  -- -- --   with Tm-NI pr gr tr t
+  -- -- -- NI ¬ℓᴴ⊑ℓᴸ t σ σ′ pr gr tr | inj₁ pp
+  -- -- --   with assume t pp
+  -- -- -- ... | ppp with PPPP t ppp σ | PPPP t ppp σ′
+  -- -- -- ... | a | b = ≈-trans a (≈-sym b )
+  -- -- -- NI ¬ℓᴴ⊑ℓᴸ t σ σ′ pr gr tr | inj₂ y = {!!}
