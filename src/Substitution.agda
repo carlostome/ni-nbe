@@ -61,7 +61,6 @@ module Substitution where
   Ø       ∘ₛ δ  = Ø
   (s `, t) ∘ₛ δ = (s ∘ₛ δ) `, subst δ t
 
-
   idlₛ : ∀ {Γ Δ} → (σ : Sub Γ Δ) → idₛ ∘ₛ σ ≡ σ
   idlₛ Ø        = refl
   idlₛ (σ `, x) = {!!}
@@ -72,6 +71,9 @@ module Substitution where
   assₛ : ∀ {Γ Δ Σ Ξ} → (σ₁ : Sub Δ Γ) (σ₂ : Sub Σ Δ) (σ₃ : Sub Ξ Σ)
       → (σ₁ ∘ₛ σ₂) ∘ₛ σ₃ ≡ σ₁ ∘ₛ (σ₂ ∘ₛ σ₃)
   assₛ = {!!}
+
+  subst-idₛ : ∀ {a} {Γ} → (t : Term a Γ)→ subst idₛ t ≡ t
+  subst-idₛ t = ?
 
   assₛₑₑ : ∀ {Γ Δ Σ Ξ} (σ : Sub Δ Γ) (e₁ : Σ ⊆ Δ) (e₂ : Ξ ⊆ Σ)
         → (σ ₛ∘ₑ e₁) ₛ∘ₑ e₂ ≡ σ ₛ∘ₑ (e₁ ∘ₑ e₂)

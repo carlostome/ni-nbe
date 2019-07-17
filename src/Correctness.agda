@@ -121,7 +121,7 @@ module Correctness where
   inv {𝕓} p q =
     ≈-trans (≈-sym p) q
   inv {a ⇒ b}  p q =
-    λ  e r → inv {b} (∙-≈ (inv-wken p) ≈-refl) (q e r)
+    λ  e r → inv {b} ((inv-wken p) ∙ ≈-refl) (q e r)
   inv {a + b} {v = v} p q =
     inv₊ {v = v} p q
   inv {⟨ ℓ ⟩ a} {v = v} p q =
@@ -138,10 +138,10 @@ module Correctness where
         → R (wkenTm e t) (wken𝒟 e v)
     wkPresR₊ {a} {b} {v = return (inj₁ x)} {e} (t′ , R₊′ , p)
       = wkenTm e t′ , wkPresR {t = t′} R₊′ ,
-        ≈-trans (inv-wken p) (inl-≈ ≈-refl)
+        ≈-trans (inv-wken p) (inl ≈-refl)
     wkPresR₊ {a} {b} {v = return (inj₂ y)} {e} (t′ , R₊′ , p)
       = wkenTm e t′ , wkPresR {t = t′} R₊′ ,
-        ≈-trans (inv-wken p) (inr-≈ ≈-refl)
+        ≈-trans (inv-wken p) (inr ≈-refl)
     wkPresR₊ {a} {b} {v = branch n v₁ v₂} {e} (t₁ , t₂ , R₊₁ , R₊₂ , p) =
       wkenTm (keep e) t₁
       , (wkenTm (keep e) t₂)
@@ -215,8 +215,8 @@ module Correctness where
   corrEval {Γ} {a} (var x) {Δ} {σ} {γ}       p =
     corrLookup {x = x} p
   corrEval {Γ} {a} (t ∙ u) {Δ} {σ} {γ}       p =
-    -- needs id law of Tm' presheaf
-    inv {a} {!!} (corrEval t p idₑ (corrEval u p))
+    inv {a} ((≡⇒≈ (wkenTm-idₑ _)) ∙ ≈-refl)
+            (corrEval t p idₑ (corrEval u p))
   corrEval {Γ} {.(⟨ _ ⟩ _)} (_↑_ c t) {Δ} {σ} {γ} p =
     corrUp𝒞 {t = subst σ t} {eval t γ} (corrEval t p)
   corrEval {Γ} {.(⟨ _ ⟩ _)} (η t) {Δ} {σ} {γ} p =
@@ -243,9 +243,7 @@ module Correctness where
     corrReflect {Γ} {𝕓} {n}       = ≈-refl
     corrReflect {Γ} {a ⇒ b} {n}
       = λ e p → inv {b}
-        (∙-≈
-          (≡⇒≈ (sym (nat-qNe _)))
-          (≈-sym (corrReifyVal p)))
+        ( (≡⇒≈ (sym (nat-qNe _))) ∙ (≈-sym (corrReifyVal p)))
         (corrReflect {a = b})
     corrReflect {Γ} {a + b} {n}
       = _ , _
@@ -255,25 +253,25 @@ module Correctness where
       , (var ze
         , corrReflect {Γ `, b} {n = var ze}
         , ≈-refl)
-      , {!!} --needs +η-≈
+      , +η
     corrReflect {Γ} {⟨ ℓ ⟩ a} {n}
       = η (var ze)
       , (var ze
         , (corrReflect {Γ `, a} {n = var ze}
         , ≈-refl))
-      , ≈-trans ⟨⟩η-≈ (≫=-≈ {!!} ≈-refl) -- needs some rule
+        , ≈-trans ⟨⟩η (≈-sym ↑γ₃ ≫= ≈-refl)
 
     corrReifyVal : ∀ {Γ} {a}
       {t : Term a Γ} {v : ⟦ a ⟧ .In Γ}
       → R t v
       → t ≈ qNf (reifyVal v)
-    corrReifyVal {Γ} {𝟙}         p = {!!} --need 𝟙η-≈
+    corrReifyVal {Γ} {𝟙}         p = 𝟙η
     corrReifyVal {Γ} {𝕓}         p = p
     corrReifyVal {Γ} {a ⇒ b} {t} p =
       ≈-trans
-        ⇒η-≈
-        (λ-≈ (corrReifyVal {a = b}
-              (p (drop idₑ) (corrReflect {a = a} {n = var ze})))) 
+        ⇒η
+        (`λ (corrReifyVal {a = b}
+              (p (drop idₑ) (corrReflect {a = a} {n = var ze}))))
     corrReifyVal {Γ} {a + a₁}  p = {!!}
     corrReifyVal {Γ} {⟨ ℓ ⟩ a} p = {!t!}
 
@@ -283,7 +281,7 @@ module Correctness where
     → t ≈ qNf (reify (eval t))
   corrReify {Γ} {a} {t} f =
     corrReifyVal
-      (inv {a} {t₁ = subst idₛ t} {!!} (f {!!}))
+      (inv {a} {t₁ = subst idₛ t} (≡⇒≈ (subst-idₛ _) ) (f {!!}))
 
   consistent : ∀ {Γ} {a}
     → (t : Term a Γ)
