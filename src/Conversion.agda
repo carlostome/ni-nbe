@@ -102,7 +102,7 @@ module Conversion where
   ≡⇒≈ refl = ≈-refl
 
   postulate
-    inv-subst : ∀ {Γ Δ} {a} {σ : Sub Δ Γ} → {t₁ t₂ : Term a Γ} → t₁ ≈ t₂ → subst σ t₁ ≈  subst σ t₂
+    inv-subst : ∀ {Γ Δ} {a} {t₁ t₂ : Term a Γ} → {σ : Sub Δ Γ} → t₁ ≈ t₂ → subst σ t₁ ≈  subst σ t₂
 
   -- weakening preserves ≈
   inv-wken : ∀ {a} {Γ} {t₁ t₂ : Term a Γ}

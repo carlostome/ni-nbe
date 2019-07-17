@@ -96,16 +96,15 @@ module NI where
     → ⟨ ℓⁱ ⟩ˢᶜ Γ      -- input is atleast ℓⁱ-sensitive
     → Tr a ℓᵒ        -- output is transparent at ℓᵒ
     → a ∈ Γ → (ℓⁱ ⊑ ℓᵒ)
+  Var-Sec (p `, x) t (su v) = Var-Sec p t v
   Var-Sec (p `, ()) 𝟙 ze
   Var-Sec (p `, ()) 𝕓 ze
   Var-Sec (p `, ()) (_ + _) ze
-  Var-Sec (p `, (⇒ x)) (⇒ y) ze = Var-Sec (p `, x) y ze
+  Var-Sec (p `, (⇒ x)) (⇒ y) ze    = Var-Sec (p `, x) y ze
   Var-Sec (p `, (⟨⟩ q)) (⟨ t ⟩ x) ze = ⊑-trans q x
-  Var-Sec (p `, x) t (su v) = Var-Sec p t v
 
   -- Neutrals are secure
   -- (observer must have clearance ℓⁱ ⊑ ℓᵒ to observe neutral-outputs)
-
   Ne-Sec : ∀ {Γ} {a} {ℓⁱ ℓᵒ}
     → ⟨ ℓⁱ ⟩ˢᶜ Γ      -- input is atleast ℓⁱ-sensitive
     → Tr a ℓᵒ        -- output is transparent at ℓᵒ
@@ -140,11 +139,11 @@ module NI where
   ... | inj₁ (n' , r) = inj₁ (η n' , cong η r)
   ... | inj₂ r = inj₂ r
 
-  -- 
+  --
   Nf-NI p g (⟨ t ⟩ q) (r ↑ x ≫= n) with Ne-Sen p x
   ... | ⟨⟩ s = inj₂ (⊑-trans s (⊑-trans r q))
 
-  -- 
+  --
   Nf-NI p (g + _) (t + _) (inl n) with Nf-NI p g t n
   ... | inj₁ (n' , r) = inj₁ (inl n' , cong inl r)
   ... | inj₂ r = inj₂ r
@@ -158,29 +157,19 @@ module NI where
   Nf-NI p g t (case x n₁ n₂) with Ne-Sen p x
   ... | ()
 
-  -- -------------------------------------
-  -- -- Noninterference theorem for terms
-  -- -------------------------------------
+  -------------------------------------
+  -- Noninterference theorem for terms
+  -------------------------------------
 
   open import Conversion
   open import Substitution
   open import NBE
   open import Correctness
 
+  open import Data.Empty
+
   IsConstTm' : ∀ {Γ a} → Term a Γ → Set
   IsConstTm' {Γ} {a} t = Σ (Term a Ø) λ t' → wkenTm ⊆-term t' ≈ t
-
-  IsConstSub : ∀ {Γ} {a} → (t : Term a Γ) → Set
-  IsConstSub {Γ} {a} t = Σ (Term a Ø) λ t' → subst Ø t' ≈ t
-
-  -- final : ∀ {Γ} → (σ : Sub Γ Ø) → σ ≡ Ø
-  -- final Ø = refl
-
-
-  -- PPPP : ∀ {Δ Γ} {a} (t : Term a Γ) → (p : IsConstSub t) → (σ : Sub Δ Γ) → subst σ t ≈ subst Ø (proj₁ p)
-  -- PPPP t (t' , pr) σ with ≈ {σ = σ} pr
-  -- ... | a with substppp {t = t'} {σ = Ø} {σ′ = σ}
-  -- ... | b =  ≈-trans (≈-sym a) b
 
   -- Ultimate noninterference theorem
   Tm-NI : ∀ {Γ} {a} {ℓⁱ ℓᵒ}
@@ -189,45 +178,48 @@ module NI where
       → (t : Term a Γ) → (IsConstTm' t) ⊎ (ℓⁱ ⊑ ℓᵒ)
   Tm-NI p g q t with Nf-NI p g q (norm t)
   Tm-NI p g q t | inj₁ (n , r) = inj₁ ((qNf n) ,
-    ≡⇒≈ {!!})
-    -- -sym
-      -- (≈-trans {!!} {!!}))
-        -- (≈-sym
-         --      (≈-trans
-         --        ({!!})
-         --        (≡⇒≈ r))))))
+    (≈-trans
+      (≡⇒≈ (trans (nat-qNf n)
+                  (cong qNf r)))
+        (≈-sym (consistent t))))
   Tm-NI p g q t | inj₂ y = inj₂ y
 
+  private
+    lemma : ∀ {Γ} {Δ} (σ σ′ : Sub Δ Γ) → ⊆-term ₑ∘ₛ σ ≡ ⊆-term ₑ∘ₛ σ′
+    lemma {Ø} {Δ} Ø Ø                     = refl
+    lemma {Γ `, x} {Δ} (σ `, _) (σ′ `, _) = lemma σ σ′
 
-  Tm-NI' : ∀ {Δ Γ} {a} {ℓⁱ ℓᵒ}
-      → (t : Term a Γ)
-      → (σ : Sub Δ Γ)       -- substitution for part of input which is not sensitive
-      → ⟨ ℓⁱ ⟩ˢᶜ Δ           -- remaining input is atleast ℓⁱ-sensitive
-      → Ground a → Tr a ℓᵒ  -- output is ground, and transparent at ℓᵒ
-      → (IsConstTm' (subst σ t)) ⊎ (ℓⁱ ⊑ ℓᵒ)
-  Tm-NI' t σ s gr tr = Tm-NI s gr tr _
-
-  -- -- open import Relation.Nullary
-  
-       
-  PPPP : ∀ {Δ Γ} {a} (t : Term a Γ) → (p : IsConstSub t) → (σ : Sub Δ Γ) → subst σ t ≈ subst Ø (proj₁ p)
-  PPPP t (t' , pr) σ with inv-subst {σ = σ} pr
-  ... | a with {!!} {t = t'} {σ = Ø} {σ′ = σ}
-  ... | b =  ≈-trans (≈-sym a) b
-
-  postulate assume : ∀ {Γ} {a} → (t : Term a Γ) → IsConstTm' t -> IsConstSub t
-
-  NI : ∀ {Δ Γ} {a} {ℓᴸ ℓᴴ}
+  NI-Prot : ∀ {Δ Γ} {a} {ℓᴸ ℓᴴ}
          → ¬ (ℓᴴ ⊑ ℓᴸ)
          → (t    : Term a Γ)
          → (σ σ′ : Sub Δ Γ)
          → ⟨ ℓᴴ ⟩ˢᶜ Γ
          → Ground a → Tr a ℓᴸ
          → subst σ t ≈ subst σ′ t
-  NI ¬ℓᴴ⊑ℓᴸ t σ σ′ pr gr tr
+  NI-Prot ¬ℓᴴ⊑ℓᴸ t σ σ′ pr gr tr
     with Tm-NI pr gr tr t
-  NI ¬ℓᴴ⊑ℓᴸ t σ σ′ pr gr tr | inj₁ pp
-    with assume t pp
-  ... | ppp with PPPP t ppp σ | PPPP t ppp σ′
-  ... | a | b = ≈-trans a (≈-sym b )
-  NI ¬ℓᴴ⊑ℓᴸ t σ σ′ pr gr tr | inj₂ y = {!!}
+  NI-Prot ¬ℓᴴ⊑ℓᴸ t σ σ′ pr gr tr | inj₁ (t′ , p)
+   with inv-subst {σ = σ} p | inv-subst {σ = σ′} p
+  ... | eq₁ | eq₂ = ≈-trans (≈-sym eq₁)
+    (≈-trans (≡⇒≈ (trans (trans (sym (Term-ₑ∘ₛ t′ σ ⊆-term)) (cong (λ s → subst s t′) (lemma σ σ′)))
+                  (Term-ₑ∘ₛ t′ σ′ ⊆-term))) eq₂)
+  NI-Prot ¬ℓᴴ⊑ℓᴸ t σ σ′ pr gr tr | inj₂ y = ⊥-elim (¬ℓᴴ⊑ℓᴸ y)
+
+  -- Low equivalence of substitutions
+  data _≈⟨_⟩ₛ_ {Γ Σ} (σ₁ : Sub Σ Γ) (ℓᴴ : Label) (σ₂ : Sub Σ Γ) : Set where
+    loweq : ∀ {Δ} → ⟨ ℓᴴ ⟩ˢᶜ Δ → (σₗ : Sub Δ Γ) → (σₕ₁ σₕ₂ : Sub Σ Δ)
+          → σ₁ ≡ (σₗ ∘ₛ σₕ₁) → σ₂ ≡ (σₗ ∘ₛ σₕ₂)
+          → σ₁ ≈⟨ ℓᴴ ⟩ₛ σ₂
+
+  -- Noninterference for the calculus
+  NI : ∀ {Δ Γ} {a} {ℓᴸ ℓᴴ}
+      → ¬ (ℓᴴ ⊑ ℓᴸ)
+      → (t     : Term a Γ)
+      → (σ₁ σ₂ : Sub Δ Γ)
+      → σ₁ ≈⟨ ℓᴴ ⟩ₛ σ₂
+      → Ground a → Tr a ℓᴸ
+      → subst σ₁ t ≈ subst σ₂ t
+  NI ¬ℓᴴ⊑ℓᴸ t .(σₗ ∘ₛ σₕ₁) .(σₗ ∘ₛ σₕ₂) (loweq pr σₗ σₕ₁ σₕ₂ refl refl) gr tr
+    with NI-Prot ¬ℓᴴ⊑ℓᴸ (subst σₗ t) σₕ₁ σₕ₂ pr gr tr
+  ... | p = ≈-trans (≡⇒≈ (Term-∘ₛ t σₗ σₕ₁))
+                    (≈-trans p (≡⇒≈ (sym (Term-∘ₛ t σₗ σₕ₂))))
