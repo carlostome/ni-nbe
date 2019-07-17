@@ -261,19 +261,54 @@ module Correctness where
         , ≈-refl))
         , ≈-trans ⟨⟩η (≈-sym ↑γ₃ ≫= ≈-refl)
 
+    corrReifyVal𝒞 : ∀ {Γ} {ℓ} {a} {t : Term (⟨ ℓ ⟩ a) Γ} {v : 𝒞 ⟦ a ⟧ ℓ Γ}
+                  → R⟨⟩ t v
+                  → t ≈ qNf (reifyVal𝒞 v)
+    corrReifyVal𝒞 {v = return x} (t′ , Rt′ , p)
+      = ≈-trans p (η (corrReifyVal Rt′))
+    corrReifyVal𝒞 {v = bind c n v} (t′ , Rt′ , p)
+      = ≈-trans p (≈-refl ≫= (corrReifyVal𝒞 {t = t′} {v = v} Rt′))
+    corrReifyVal𝒞 {v = branch n v₁ v₂} (t₁ , t₂ , Rt₁ , Rt₂ , p)
+      = ≈-trans p (case ≈-refl (corrReifyVal𝒞 {t = t₁} {v = v₁} Rt₁)
+                               (corrReifyVal𝒞 {t = t₂} {v = v₂} Rt₂))
+
+    corrReifySum : ∀ {Γ} {a b} {t : Term (a + b) Γ} {v : (⟦ a ⟧ +ᴾ ⟦ b ⟧) .In Γ}
+                 → Rl₊ t v
+                 → t ≈ (qNf (reifySum v))
+    corrReifySum {Γ} {a} {b} {t} {inj₁ x} (t′ , Rt′ , p)
+      = ≈-trans p (inl (corrReifyVal Rt′))
+    corrReifySum {Γ} {a} {b} {t} {inj₂ y} (t′ , Rt′ , p)
+      = ≈-trans p (inr (corrReifyVal Rt′))
+
+    corrReifyVal𝒟 : ∀ {Γ} {a} {b} {t : Term (a + b) Γ}
+                                   {v : 𝒟 (⟦ a ⟧ +ᴾ ⟦ b ⟧) Γ}
+                  → R₊ t v
+                  → t ≈ qNf (run𝒟Nf (map𝒟 reifySum v))
+    corrReifyVal𝒟 {Γ} {a} {b} {t} {return x} p
+      = corrReifySum p
+    corrReifyVal𝒟 {Γ} {a} {b} {t} {branch x v₁ v₂} (t₁ , t₂ , R₁ , R₂ , p)
+      = ≈-trans p (case ≈-refl (corrReifyVal𝒟 {t = t₁} {v = v₁} R₁)
+                               (corrReifyVal𝒟 {t = t₂} {v = v₂} R₂))
+
     corrReifyVal : ∀ {Γ} {a}
       {t : Term a Γ} {v : ⟦ a ⟧ .In Γ}
       → R t v
       → t ≈ qNf (reifyVal v)
-    corrReifyVal {Γ} {𝟙}         p = 𝟙η
-    corrReifyVal {Γ} {𝕓}         p = p
-    corrReifyVal {Γ} {a ⇒ b} {t} p =
-      ≈-trans
-        ⇒η
-        (`λ (corrReifyVal {a = b}
-              (p (drop idₑ) (corrReflect {a = a} {n = var ze}))))
-    corrReifyVal {Γ} {a + a₁}  p = {!!}
-    corrReifyVal {Γ} {⟨ ℓ ⟩ a} p = {!t!}
+    corrReifyVal {Γ} {𝟙}           p = 𝟙η
+    corrReifyVal {Γ} {𝕓}           p = p
+    corrReifyVal {Γ} {a ⇒ b}   {t} p
+      = ≈-trans ⇒η
+                (`λ (corrReifyVal {a = b}
+                      (p (drop idₑ) (corrReflect {a = a} {n = var ze}))))
+    corrReifyVal {Γ} {a + b}  {t} {v} p
+      = corrReifyVal𝒟 {t = t} {v = v} p
+    corrReifyVal {Γ} {⟨ ℓ ⟩ a} {t} {v} p
+      = corrReifyVal𝒞 {t = t} {v = v} p
+
+  Rs-id : ∀ {Γ} → Rs {Γ = Γ} {Δ = Γ} idₛ (idSubst Γ)
+  Rs-id {Ø}      = tt
+  Rs-id {Γ `, a} with Rs-id {Γ}
+  ... | p = {!Rs-id !} , (corrReflect {Γ = Γ `, a} {n = var ze})
 
   corrReify : ∀ {Γ} {a}
     → {t : Term a Γ}
@@ -281,7 +316,7 @@ module Correctness where
     → t ≈ qNf (reify (eval t))
   corrReify {Γ} {a} {t} f =
     corrReifyVal
-      (inv {a} {t₁ = subst idₛ t} (≡⇒≈ (subst-idₛ _) ) (f {!!}))
+      (inv {a} {t₁ = subst idₛ t} (≡⇒≈ (subst-idₛ _) ) (f Rs-id))
 
   consistent : ∀ {Γ} {a}
     → (t : Term a Γ)

@@ -93,10 +93,10 @@ module NBE where
     reifyVal {𝕓} x      = x
     reifyVal {a ⇒ b} f  = `λ (reifyVal (f (drop idₑ) (reflect {a} (var ze))))
     reifyVal {⟨ a ⟩ ℓ} m = reifyVal𝒞 m
-    reifyVal {a + b}  m = run𝒟Nf (map𝒟 reifySum m)
+    reifyVal {a + b}  m = reifyVal𝒟 m
 
-    reifyVal𝒟 : ∀ {a} → 𝒟ᴾ ⟦ a ⟧ →∙ Nfᴾ a
-    reifyVal𝒟 {a} m = run𝒟Nf {a} (map𝒟 reifyVal m)
+    reifyVal𝒟 : ∀ {a b} → 𝒟ᴾ (⟦ a ⟧ +ᴾ ⟦ b ⟧) →∙ Nfᴾ (a + b)
+    reifyVal𝒟 m = run𝒟Nf (map𝒟 reifySum m)
 
     reifySum : ∀ {a b} → (⟦ a ⟧ +ᴾ ⟦ b ⟧) →∙ Nfᴾ (a + b)
     reifySum {a} {b} = [ inl ∘′ reifyVal {a} , inr ∘′ reifyVal {b} ]′
