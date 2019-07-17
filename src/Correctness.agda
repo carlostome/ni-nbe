@@ -1,3 +1,4 @@
+{-# OPTIONS --allow-unsolved-metas #-}
 module Correctness where
 
   open import Preorder
@@ -164,8 +165,9 @@ module Correctness where
       = (wkenTm (keep e) t₁) , (wkenTm (keep e) t₂)
       , wkPresR⟨⟩ {t = t₁} {v = v₁} {e = keep e} R𝒞₁
       , wkPresR⟨⟩ {t = t₂} {v = v₂} {e = keep e} R𝒞₂
-      , ≈-trans (inv-wken p) (≡⇒≈ (cong (λ n′ → case n′ (wkenTm (keep e) t₁) (wkenTm (keep e) t₂))
-                                  (nat-qNe n)))
+      , ≈-trans (inv-wken p)
+          (≡⇒≈ (cong (λ n′ → case n′ (wkenTm (keep e) t₁) (wkenTm (keep e) t₂))
+                     (nat-qNe n)))
 
     wkPresR : ∀ {a} {Γ Δ} {t :  Term a Γ} {v : In ⟦ a ⟧ Γ}
             {e : Δ ⊆ Γ}
@@ -181,6 +183,11 @@ module Correctness where
     wkPresR {a + b}  {v = v} r = wkPresR₊ {a} {b} {v = v} r
     wkPresR {⟨ ℓ ⟩ a} {v = v} r = wkPresR⟨⟩ {a} {ℓ} {v = v} r
 
+  Rs-ₛ∘ₑ : ∀ {Γ Δ Σ} {σ : Sub Δ Γ} {γ : ⟦ Γ ⟧ₑ .In Δ} {e : Σ ⊆ Δ}
+        → Rs σ γ → Rs (σ ₛ∘ₑ e) (Wken ⟦ Γ ⟧ₑ e γ)
+  Rs-ₛ∘ₑ {Ø} {Δ} {Σ₁} {Ø} {γ} {e} x       = x
+  Rs-ₛ∘ₑ {Γ `, a} {Δ} {Σ₁} {σ `, t′} {γ , t} {e} (r₁ , r₂)
+        = Rs-ₛ∘ₑ r₁ , wkPresR {t = t′} r₂
   ---------------------------------------------
   -- Fundamental theorem of logical relations
   ---------------------------------------------
@@ -190,7 +197,6 @@ module Correctness where
     ∀ {Δ} {σ : Sub Δ Γ} {γ : ⟦ Γ ⟧ₑ .In Δ}
     → Rs σ γ
     → R (subst σ t) (eval t γ)
-
 
   corrLookup : ∀ {Γ Δ} {a} {x : a ∈ Γ}
       {σ : Sub Δ Γ} {γ : ⟦ Γ ⟧ₑ .In Δ}
@@ -206,12 +212,22 @@ module Correctness where
         → R𝒞 Rl⟨⟩ (c ↑ t) (up𝒞 c v)
   corrUp𝒞 = {!!}
 
-
   corrEval : ∀ {Γ} {a}
     → (t : Term a Γ)
     → Fund t
   corrEval {Γ} {.𝟙} unit {Δ} {σ} {γ}         p = tt
-  corrEval {Γ} {.(_ ⇒ _)} (`λ t) {Δ} {σ} {γ} p = {!!}
+  corrEval {Γ} {.(a ⇒ b)} (`λ {a = a} {b} t) {Δ} {σ} {γ} p {t = t′} {e′}
+    = λ e q →
+        inv {a = b}
+          (≈-trans
+            (≡⇒≈
+              (trans
+                (trans (cong (λ s → subst (s `, t′) t)
+                       {!!})
+                  (Term-∘ₛ t (((dropˢ σ) ₛ∘ₑ keep e) `, (var ze)) (idₛ `, t′)))
+                (cong (subst (idₛ `, t′)) (Term-ₛ∘ₑ t (keepˢ σ) (keep e)))))
+            (≈-sym ⇒β))
+            (corrEval t {σ = (σ ₛ∘ₑ e) `, t′} {γ = Wken ⟦ Γ ⟧ₑ e γ , e′} (Rs-ₛ∘ₑ p , q) )
   corrEval {Γ} {a} (var x) {Δ} {σ} {γ}       p =
     corrLookup {x = x} p
   corrEval {Γ} {a} (t ∙ u) {Δ} {σ} {γ}       p =
@@ -224,9 +240,9 @@ module Correctness where
   corrEval {Γ} {.(⟨ _ ⟩ _)} (t ≫= t₁) {Δ} {σ} {γ} p =
     {!!}
   corrEval {Γ} {.(_ + _)} (inl t) {Δ} {σ} {γ} p =
-    {!!}
+    (subst σ t) , corrEval t p , ≈-refl
   corrEval {Γ} {.(_ + _)} (inr t) {Δ} {σ} {γ} p =
-    {!!}
+    (subst σ t) , corrEval t p , ≈-refl
   corrEval {Γ} {a} (case t t₁ t₂) {Δ} {σ} {γ} p =
     {!!}
 

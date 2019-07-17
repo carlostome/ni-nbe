@@ -73,7 +73,7 @@ module Substitution where
   assₛ = {!!}
 
   subst-idₛ : ∀ {a} {Γ} → (t : Term a Γ)→ subst idₛ t ≡ t
-  subst-idₛ t = ?
+  subst-idₛ t = {!!}
 
   assₛₑₑ : ∀ {Γ Δ Σ Ξ} (σ : Sub Δ Γ) (e₁ : Σ ⊆ Δ) (e₂ : Ξ ⊆ Σ)
         → (σ ₛ∘ₑ e₁) ₛ∘ₑ e₂ ≡ σ ₛ∘ₑ (e₁ ∘ₑ e₂)
@@ -86,6 +86,10 @@ module Substitution where
   assₑₛₑ (σ `, x) (keep e₁) e₂ = cong (_`, wkenTm e₂ x) (assₑₛₑ σ e₁ e₂)
   assₑₛₑ (σ `, x) (drop e₁) e₂ = assₑₛₑ σ e₁ e₂
 
+  assₛₑₛ  : ∀ {Γ Δ Σ Ξ} (σ₁ : Sub Δ Γ) (σ₂ : Sub Ξ Σ) (e : Σ ⊆ Δ)
+         → (σ₁ ₛ∘ₑ e) ∘ₛ σ₂ ≡ σ₁ ∘ₛ (e ₑ∘ₛ σ₂)
+
+  assₛₑₛ  = ?
   ∈ₛ-ₛ∘ₑ : ∀ {τ} {Γ Δ Σ} → (x : τ ∈ Γ) → (σ : Sub Δ Γ) → (e : Σ ⊆ Δ)
         → ∈ₛ (σ ₛ∘ₑ e) x ≡ wkenTm e (∈ₛ σ x)
   ∈ₛ-ₛ∘ₑ ze (σ `, t) e     = refl
