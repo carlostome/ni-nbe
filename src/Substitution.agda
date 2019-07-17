@@ -1,4 +1,3 @@
-{-# OPTIONS --allow-unsolved-metas #-}
 module Substitution where
 
   open import Type
@@ -170,23 +169,43 @@ module Substitution where
                        (cong (_ₛ∘ₑ drop idₑ) (idrₑₛ e)))
   idrₑₛ (drop e) = trans (sym (assₑₛₑ idₛ e (drop idₑ))) (cong dropˢ (idrₑₛ e))
 
+  ∈ₛ-∘ₛ : ∀ {a} {Γ Δ Σ} (σ₁ : Sub Δ Σ)(σ₂ : Sub Γ Δ) (x : a ∈ Σ)
+        → ∈ₛ (σ₁ ∘ₛ σ₂) x ≡ subst σ₂ (∈ₛ σ₁ x)
+  ∈ₛ-∘ₛ (σ₁ `, _) σ₂ ze = refl
+  ∈ₛ-∘ₛ (σ₁ `, t) σ₂ (su x) = ∈ₛ-∘ₛ σ₁ σ₂ x
+  -- 
+  private
+    lemma₂ : ∀ {a} {Γ Δ Σ} (σ₁ : Sub Δ Γ) (σ₂ : Sub Σ Δ)
+           → dropˢ {a = a} (σ₁ ∘ₛ σ₂) ≡ dropˢ σ₁ ∘ₛ keepˢ σ₂
+    lemma₂ σ₁ σ₂ = (trans (assₛₛₑ σ₁ σ₂ (drop idₑ))
+                    (trans (cong (σ₁ ∘ₛ_)
+                    (trans refl (sym (idlₑₛ (dropˢ σ₂)))))
+                    (sym (assₛₑₛ σ₁ (keepˢ σ₂) (drop idₑ)))))
+
   Term-∘ₛ : ∀ {a} {Γ Δ Σ} → (t : Term a Γ) → (σ₁ : Sub Δ Γ) → (σ₂ : Sub Σ Δ)
           → subst (σ₁ ∘ₛ σ₂) t ≡ subst σ₂ (subst σ₁ t)
   Term-∘ₛ unit σ₁ σ₂     = refl
   Term-∘ₛ (`λ t) σ₁ σ₂   = cong `λ (trans (cong (λ s → subst (s `, var ze) t)
-                                   (trans (assₛₛₑ σ₁ σ₂ (drop idₑ))
-                                          (trans (cong (σ₁ ∘ₛ_)
-                                          (trans refl (sym (idlₑₛ (dropˢ σ₂)))))
-                                          (sym (assₛₑₛ σ₁ (keepˢ σ₂) (drop idₑ))))))
+                                   (lemma₂ σ₁ σ₂))
                                    (Term-∘ₛ t (keepˢ σ₁) (keepˢ σ₂)))
-  Term-∘ₛ (var x) σ₁ σ₂  = {!!}
+  Term-∘ₛ (var x) σ₁ σ₂  = ∈ₛ-∘ₛ σ₁ σ₂ x
   Term-∘ₛ (t ∙ t₁) σ₁ σ₂ = cong₂ _∙_ (Term-∘ₛ t σ₁ σ₂) (Term-∘ₛ t₁ σ₁ σ₂)
   Term-∘ₛ (x ↑ t) σ₁ σ₂  = cong (x ↑_) (Term-∘ₛ t σ₁ σ₂)
   Term-∘ₛ (η t) σ₁ σ₂ = cong η (Term-∘ₛ t σ₁ σ₂)
-  Term-∘ₛ (t ≫= t₁) σ₁ σ₂ = {!!}
+  Term-∘ₛ (t ≫= t₁) σ₁ σ₂ = cong₂ _≫=_ (Term-∘ₛ t σ₁ σ₂)
+                                        (trans (cong (λ s → subst (s `, var ze) t₁)
+                                               (lemma₂ σ₁ σ₂))
+                                               (Term-∘ₛ t₁ (keepˢ σ₁) (keepˢ σ₂)))
   Term-∘ₛ (inl t) σ₁ σ₂ = cong inl (Term-∘ₛ t σ₁ σ₂)
   Term-∘ₛ (inr t) σ₁ σ₂ = cong inr (Term-∘ₛ t σ₁ σ₂)
-  Term-∘ₛ (case t t₁ t₂) σ₁ σ₂ = cong₃ case (Term-∘ₛ t σ₁ σ₂) {!!} {!!}
+  Term-∘ₛ (case t t₁ t₂) σ₁ σ₂
+    = cong₃ case (Term-∘ₛ t σ₁ σ₂)
+                 (trans (cong (λ s → subst (s `, var ze) t₁)
+                               (lemma₂ σ₁ σ₂))
+                               (Term-∘ₛ t₁ (keepˢ σ₁) (keepˢ σ₂)))
+                 (trans (cong (λ s → subst (s `, var ze) t₂)
+                               (lemma₂ σ₁ σ₂))
+                               (Term-∘ₛ t₂ (keepˢ σ₁) (keepˢ σ₂)))
 
   ∈ₛ-idₛ : ∀ {Γ} {a} (x : a ∈ Γ) → ∈ₛ idₛ x ≡ var x
   ∈ₛ-idₛ ze      = refl
