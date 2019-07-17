@@ -94,9 +94,13 @@ module NBE (Pre : RB.Preorder 0ℓ 0ℓ 0ℓ)where
 
     wkenV-∘ₑ : ∀ {τ} {Γ Δ Σ} → (x : τ ∈ Γ) → (e₁ : Σ ⊆ Δ) (e₂ : Δ ⊆ Γ)
                 → wkenV e₁ (wkenV e₂ x) ≡ wkenV (e₂ ∘ₑ e₁) x
-    wkenV-∘ₑ () base base
-    wkenV-∘ₑ x (keep e₁) (drop e₂) = cong su (wkenV-∘ₑ x e₁ e₂)
-    wkenV-∘ₑ x (drop e₁) e₂        = cong su (wkenV-∘ₑ x e₁ e₂)
+    wkenV-∘ₑ ()     base base
+    wkenV-∘ₑ ze     (keep e₁) (drop e₂) = cong su (wkenV-∘ₑ ze e₁ e₂)
+    wkenV-∘ₑ (su x) (keep e₁) (drop e₂) = cong su (wkenV-∘ₑ (su x) e₁ e₂)
+    wkenV-∘ₑ ze     (drop e₁) (keep e₂) = cong su (wkenV-∘ₑ ze e₁ (keep e₂))
+    wkenV-∘ₑ ze     (drop e₁) (drop e₂) = cong su (wkenV-∘ₑ ze e₁ (drop e₂))
+    wkenV-∘ₑ (su x) (drop e₁) (keep e₂) = cong su (wkenV-∘ₑ (su x) e₁ (keep e₂))
+    wkenV-∘ₑ (su x) (drop e₁) (drop e₂) = cong su (wkenV-∘ₑ (su x) e₁ (drop e₂))
     wkenV-∘ₑ ze     (keep e₁) (keep e₂) = ≡-refl
     wkenV-∘ₑ (su x) (keep e₁) (keep e₂) = cong su (wkenV-∘ₑ x e₁ e₂)
 
@@ -736,10 +740,11 @@ module NBE (Pre : RB.Preorder 0ℓ 0ℓ 0ℓ)where
       idlₛ (σ `, x) = {!!}
 
       idrₛ : ∀ {Γ Δ} → (σ : Sub Γ Δ) → σ ∘ₛ idₛ ≡ σ
+      idrₛ = {!!}
 
       assₛ : ∀ {Γ Δ Σ Ξ} → (σ₁ : Sub Δ Γ) (σ₂ : Sub Σ Δ) (σ₃ : Sub Ξ Σ)
           → (σ₁ ∘ₛ σ₂) ∘ₛ σ₃ ≡ σ₁ ∘ₛ (σ₂ ∘ₛ σ₃)
-
+      assₛ = {!!}
     open SubstitutionProperties public
 
     open import Relation.Binary.PropositionalEquality hiding (subst)
@@ -762,7 +767,7 @@ module NBE (Pre : RB.Preorder 0ℓ 0ℓ 0ℓ)where
 
     ∈ₛ-ₑ∘ₛ : ∀ {τ} {Γ Δ Σ} → (x : τ ∈ Γ) → (σ : Sub Σ Δ) → (e : Δ ⊆ Γ)
           → ∈ₛ (e ₑ∘ₛ σ) x ≡ ∈ₛ σ (wkenV e x)
-    ∈ₛ-ₑ∘ₛ x      (σ `, t) (drop e) = ∈ₛ-ₑ∘ₛ x σ e
+    ∈ₛ-ₑ∘ₛ x      (σ `, t) (drop e) = {!!} -- ∈ₛ-ₑ∘ₛ x σ e
     ∈ₛ-ₑ∘ₛ ze     (σ `, t) (keep e) = refl
     ∈ₛ-ₑ∘ₛ (su x) (σ `, t) (keep e) = ∈ₛ-ₑ∘ₛ x σ e
 
@@ -1178,37 +1183,103 @@ module NBE (Pre : RB.Preorder 0ℓ 0ℓ 0ℓ)where
 
     Fund : ∀ {Γ} {a} (t : Term a Γ) → Set
     Fund {Γ} {a} t =
-      ∀ {Δ} {σ : Sub Δ Γ} {σ' : ⟦ Γ ⟧ₑ .In Δ}
-     → Rs σ σ'
-     → R (subst σ t) (eval t σ')
+      ∀ {Δ} {σ : Sub Δ Γ} {γ : ⟦ Γ ⟧ₑ .In Δ}
+     → Rs σ γ
+     → R (subst σ t) (eval t γ)
+
+
+    corrLookup : ∀ {Γ Δ} {a} {x : a ∈ Γ}
+       {σ : Sub Δ Γ} {γ : ⟦ Γ ⟧ₑ .In Δ}
+       → Rs σ γ
+       → R (∈ₛ σ x) (lookup x γ)
+    corrLookup = {!!}
+
+    -- Dibs by Nachi
+    corrUp𝒞 : ∀ {ℓᴸ ℓᴴ} {Γ} {a : Type}
+           {c : ℓᴸ ⊑ ℓᴴ} {t : Term (⟨ ℓᴸ ⟩ a) Γ}
+           {v : 𝒞 ⟦ a ⟧ ℓᴸ Γ} 
+         → R𝒞 Rl⟨⟩ t v
+         → R𝒞 Rl⟨⟩ (c ↑ t) (up𝒞 c v)
+    corrUp𝒞 = {!!}
+
 
     corrEval : ∀ {Γ} {a}
       → (t : Term a Γ)
       → Fund t
-    corrEval {Γ} {𝟙} t {Δ} {σ} {σ'} x = {!t!}
-    corrEval {Γ} {𝕓} t {Δ} {σ} {σ'} x = {!!}
-    corrEval {Γ} {a ⇒ a₁} t {Δ} {σ} {σ'} x = {!!}
-    corrEval {Γ} {a + a₁} t {Δ} {σ} {σ'} x = {!!}
-    corrEval {Γ} {⟨ ℓ ⟩ a} t {Δ} {σ} {σ'} x = {!!}
+    corrEval {Γ} {.𝟙} unit {Δ} {σ} {γ}         p = tt
+    corrEval {Γ} {.(_ ⇒ _)} (`λ t) {Δ} {σ} {γ} p = {!!}
+    corrEval {Γ} {a} (var x) {Δ} {σ} {γ}       p =
+      corrLookup {x = x} p
+    corrEval {Γ} {a} (t ∙ u) {Δ} {σ} {γ}       p =
+      -- needs id law of Tm' presheaf
+      inv {a} {!!} (corrEval t p idₑ (corrEval u p))
+    corrEval {Γ} {.(⟨ _ ⟩ _)} (_↑_ c t) {Δ} {σ} {γ} p =
+      corrUp𝒞 {t = subst σ t} {eval t γ} (corrEval t p)
+    corrEval {Γ} {.(⟨ _ ⟩ _)} (η t) {Δ} {σ} {γ} p =
+      _ , (corrEval t p , ≈-refl) 
+    corrEval {Γ} {.(⟨ _ ⟩ _)} (t ≫= t₁) {Δ} {σ} {γ} p =
+      {!!}
+    corrEval {Γ} {.(_ + _)} (inl t) {Δ} {σ} {γ} p =
+      {!!}
+    corrEval {Γ} {.(_ + _)} (inr t) {Δ} {σ} {γ} p =
+      {!!}
+    corrEval {Γ} {a} (case t t₁ t₂) {Δ} {σ} {γ} p =
+      {!!}
 
     ---------------------------------
     -- Correctness of normalization
     ---------------------------------
 
+    mutual
+    
+      corrReflect : ∀ {Γ} {a}
+        {n : Ne a Γ}
+        → R (qNe n) (reflect n)
+      corrReflect {Γ} {𝟙} {n}       = tt
+      corrReflect {Γ} {𝕓} {n}       = ≈-refl
+      corrReflect {Γ} {a ⇒ b} {n}
+        = λ e p → inv {b}
+          (∙-≈
+            (≡⇒≈ (≡-sym (nat-qNe _)))
+            (≈-sym (corrReifyVal p)))
+          (corrReflect {a = b})
+      corrReflect {Γ} {a + b} {n}
+        = _ , _
+        , (var ze
+          , corrReflect {Γ `, a} {n = var ze}
+          , ≈-refl)
+        , (var ze
+          , corrReflect {Γ `, b} {n = var ze}
+          , ≈-refl)
+        , {!!} --needs +η-≈
+      corrReflect {Γ} {⟨ ℓ ⟩ a} {n}
+        = η (var ze)
+        , (var ze
+          , (corrReflect {Γ `, a} {n = var ze}
+          , ≈-refl))
+        , ≈-trans ⟨⟩η-≈ (≫=-≈ {!!} ≈-refl) -- needs some rule
+
+      corrReifyVal : ∀ {Γ} {a}
+        {t : Term a Γ} {v : ⟦ a ⟧ .In Γ}
+        → R t v
+        → t ≈ qNf (reifyVal v)
+      corrReifyVal {Γ} {𝟙}         p = {!!} --need 𝟙η-≈
+      corrReifyVal {Γ} {𝕓}         p = p
+      corrReifyVal {Γ} {a ⇒ b} {t} p =
+        ≈-trans
+          ⇒η-≈
+          (λ-≈ (corrReifyVal {a = b}
+               (p (drop idₑ) (corrReflect {a = a} {n = var ze}))))  
+      corrReifyVal {Γ} {a + a₁}  p = {!!}
+      corrReifyVal {Γ} {⟨ ℓ ⟩ a} p = {!!}
+    
     corrReify : ∀ {Γ} {a}
       → {t : Term a Γ}
       → Fund t
       → t ≈ qNf (reify (eval t))
-    corrReify {Γ} {.𝟙} {unit} f = {!!}
-    corrReify {Γ} {.(_ ⇒ _)} {`λ t} f = {!!}
-    corrReify {Γ} {a} {var x} f = {!!}
-    corrReify {Γ} {a} {t ∙ t₁} f = {!!}
-    corrReify {Γ} {.(⟨ _ ⟩ _)} {x ↑ t} f = {!!}
-    corrReify {Γ} {.(⟨ _ ⟩ _)} {η t} f = {!!}
-    corrReify {Γ} {.(⟨ _ ⟩ _)} {t ≫= t₁} f = {!!}
-    corrReify {Γ} {.(_ + _)} {inl t} f = {!!}
-    corrReify {Γ} {.(_ + _)} {inr t} f = {!!}
-    corrReify {Γ} {a} {case t t₁ t₂} f = {!!}
+    corrReify {Γ} {a} {t} f =
+      corrReifyVal
+        (inv {a} {t₁ = subst idₛ t} {!!} (f {!!}))
 
     consistent : ∀ {Γ} {a}
       → (t : Term a Γ)
