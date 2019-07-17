@@ -100,6 +100,10 @@ module NBE (Pre : RB.Preorder 0ℓ 0ℓ 0ℓ)where
     wkenV-∘ₑ ze     (keep e₁) (keep e₂) = ≡-refl
     wkenV-∘ₑ (su x) (keep e₁) (keep e₂) = cong su (wkenV-∘ₑ x e₁ e₂)
 
+    wkenV-idₑ : ∀ {a} {Γ} → (x : a ∈ Γ) → wkenV idₑ x ≡ x
+    wkenV-idₑ {a} {.(_ `, a)} ze     = ≡-refl
+    wkenV-idₑ {a} {.(_ `, _)} (su x) = cong su (wkenV-idₑ x)
+
   open WeakeningVariableProperties public
 
   module TermM where
@@ -132,8 +136,8 @@ module NBE (Pre : RB.Preorder 0ℓ 0ℓ 0ℓ)where
 
   module WeakeningTermProperties where
 
-    wkenTm-∘ₑ : ∀ {τ} {Γ Δ Σ} → (t : Term τ Γ) → (e₁ : Δ ⊆ Γ) (e₂ : Σ ⊆ Δ)
-                → wkenTm e₂ (wkenTm e₁ t) ≡ wkenTm (e₁ ∘ₑ e₂) t
+    wkenTm-∘ₑ : ∀ {a} {Γ Δ Σ} → (t : Term a Γ) → (e₁ : Δ ⊆ Γ) (e₂ : Σ ⊆ Δ)
+              → wkenTm e₂ (wkenTm e₁ t) ≡ wkenTm (e₁ ∘ₑ e₂) t
     wkenTm-∘ₑ unit e₁ e₂ = ≡-refl
     wkenTm-∘ₑ (`λ t) e₁ e₂     = cong (`λ) (wkenTm-∘ₑ t (keep e₁) (keep e₂))
     wkenTm-∘ₑ (var x) e₁ e₂    = cong var (wkenV-∘ₑ x e₂ e₁)
@@ -144,7 +148,20 @@ module NBE (Pre : RB.Preorder 0ℓ 0ℓ 0ℓ)where
     wkenTm-∘ₑ (inl t) e₁ e₂    = cong inl (wkenTm-∘ₑ t e₁ e₂)
     wkenTm-∘ₑ (inr t) e₁ e₂    = cong inr (wkenTm-∘ₑ t e₁ e₂)
     wkenTm-∘ₑ (case t t₁ t₂) e₁ e₂ = cong₃ case (wkenTm-∘ₑ t e₁ e₂) (wkenTm-∘ₑ t₁ (keep e₁) (keep e₂))
-                                                   (wkenTm-∘ₑ t₂ (keep e₁) (keep e₂))
+                                                                   (wkenTm-∘ₑ t₂ (keep e₁) (keep e₂))
+
+    wkenTm-idₑ : ∀ {a} {Γ} → (t : Term a Γ) → wkenTm idₑ t ≡ t
+    wkenTm-idₑ {.𝟙} {Γ} unit         = ≡-refl
+    wkenTm-idₑ {.(_ ⇒ _)} {Γ} (`λ t) = cong `λ (wkenTm-idₑ t)
+    wkenTm-idₑ {a} {Γ} (var x)       = cong var (wkenV-idₑ x)
+    wkenTm-idₑ {a} {Γ} (t ∙ u)       = cong₂ _∙_ (wkenTm-idₑ t) (wkenTm-idₑ u)
+    wkenTm-idₑ {.(⟨ _ ⟩ _)} {Γ} (x ↑ t) = cong (x ↑_) (wkenTm-idₑ t)
+    wkenTm-idₑ {.(⟨ _ ⟩ _)} {Γ} (η t)   = cong η (wkenTm-idₑ t)
+    wkenTm-idₑ {.(⟨ _ ⟩ _)} {Γ} (t ≫= f) = cong₂ _≫=_ (wkenTm-idₑ t) (wkenTm-idₑ f)
+    wkenTm-idₑ {.(_ + _)} {Γ} (inl t) = cong inl (wkenTm-idₑ t)
+    wkenTm-idₑ {.(_ + _)} {Γ} (inr t) = cong inr (wkenTm-idₑ t)
+    wkenTm-idₑ {a} {Γ} (case t t₁ t₂) = cong₃ case (wkenTm-idₑ t) (wkenTm-idₑ t₁) (wkenTm-idₑ t₂)
+
   open WeakeningTermProperties public
 
   module NormalForm where
@@ -816,11 +833,13 @@ module NBE (Pre : RB.Preorder 0ℓ 0ℓ 0ℓ)where
     idlₛₑ (drop e) =
       trans (cong (λ e → idₛ ₛ∘ₑ drop e)
                   (≡-sym (idrₑ e)))
-            (trans (≡-sym (assₛₑₑ idₛ e (drop idₑ)))
-                   (cong dropˢ (idlₛₑ e)))
+            (≡-trans (≡-sym (assₛₑₑ idₛ e (drop idₑ)))
+                     (cong dropˢ (idlₛₑ e)))
 
     idrₛₑ : ∀ {Γ Δ} → (e : Δ ⊆ Γ) → (e ₑ∘ₛ idₛ) ≡ ⌜ e ⌝ᵒᵖᵉ
-    idrₛₑ = {!!}
+    idrₛₑ base     = ≡-refl
+    idrₛₑ (keep e) = {!!}
+    idrₛₑ (drop e) = {!!}
 
     Term-∘ₛ : ∀ {a} {Γ Δ Σ} → (t : Term a Γ) → (σ₁ : Sub Δ Γ) → (σ₂ : Sub Σ Δ)
             → subst (σ₁ ∘ₛ σ₂) t ≡ subst σ₂ (subst σ₁ t)
@@ -1120,7 +1139,7 @@ module NBE (Pre : RB.Preorder 0ℓ 0ℓ 0ℓ)where
         , wkPresR₊ {a} {b} {v = v₁} R₊₁
         , wkPresR₊ {a} {b} {v = v₂} R₊₂
         , ≈-trans (inv-wken p) (≡⇒≈ (cong (λ n′ → case n′ (wkenTm (keep e) t₁) (wkenTm (keep e) t₂))
-                                    {!nat-qNe n!}))
+                                    (nat-qNe n)))
 
       wkPresR⟨⟩ : ∀ {a} {ℓ} {Γ Δ} {t :  Term (⟨ ℓ ⟩ a) Γ}
               {v : 𝒞 ⟦ a ⟧ ℓ Γ}  {e : Δ ⊆ Γ}
@@ -1145,7 +1164,7 @@ module NBE (Pre : RB.Preorder 0ℓ 0ℓ 0ℓ)where
           → R (wkenTm e t) (Wken ⟦ a ⟧ e v)
       wkPresR {𝟙}              r = tt
       wkPresR {𝕓}     {v = v} {e = e}  r = ≈-trans (inv-wken {e = e} r)
-                                                  (≡⇒≈ (nat-qNf v))
+                                                   (≡⇒≈ (nat-qNf v))
       wkPresR {a ⇒ b} {e = e} r {t = t} =  λ e' vₐ →
         inv {b}
           (≡⇒≈ (cong (λ t' → t' ∙ t) (≡-sym (wkenTm-∘ₑ _ e e'))))
