@@ -72,8 +72,22 @@ module Substitution where
       → (σ₁ ∘ₛ σ₂) ∘ₛ σ₃ ≡ σ₁ ∘ₛ (σ₂ ∘ₛ σ₃)
   assₛ = {!!}
 
-  subst-idₛ : ∀ {a} {Γ} → (t : Term a Γ)→ subst idₛ t ≡ t
-  subst-idₛ t = {!!}
+  ∈ₛ-idₛ : ∀ {Γ} {a} (x : a ∈ Γ) → ∈ₛ idₛ x ≡ var x
+  ∈ₛ-idₛ ze = refl
+  ∈ₛ-idₛ (su x) with ∈ₛ-idₛ x
+  ... | z = {!!}
+
+  subst-idₛ : ∀ {a} {Γ} → (t : Term a Γ) → subst idₛ t ≡ t
+  subst-idₛ unit = refl
+  subst-idₛ (`λ t)   = cong `λ (subst-idₛ t)
+  subst-idₛ (var x)  = ∈ₛ-idₛ x
+  subst-idₛ (t ∙ t₁) = cong₂ _∙_ (subst-idₛ t) (subst-idₛ t₁)
+  subst-idₛ (x ↑ t)  = cong (x ↑_) (subst-idₛ t)
+  subst-idₛ (η t) = cong η (subst-idₛ t)
+  subst-idₛ (t ≫= t₁) = cong₂ _≫=_ (subst-idₛ t) (subst-idₛ t₁)
+  subst-idₛ (inl t) = cong inl (subst-idₛ t)
+  subst-idₛ (inr t) = cong inr (subst-idₛ t)
+  subst-idₛ (case t t₁ t₂) = cong₃ case (subst-idₛ t) (subst-idₛ t₁) (subst-idₛ t₂)
 
   assₛₑₑ : ∀ {Γ Δ Σ Ξ} (σ : Sub Δ Γ) (e₁ : Σ ⊆ Δ) (e₂ : Ξ ⊆ Σ)
         → (σ ₛ∘ₑ e₁) ₛ∘ₑ e₂ ≡ σ ₛ∘ₑ (e₁ ∘ₑ e₂)
@@ -89,7 +103,12 @@ module Substitution where
   assₛₑₛ  : ∀ {Γ Δ Σ Ξ} (σ₁ : Sub Δ Γ) (σ₂ : Sub Ξ Σ) (e : Σ ⊆ Δ)
          → (σ₁ ₛ∘ₑ e) ∘ₛ σ₂ ≡ σ₁ ∘ₛ (e ₑ∘ₛ σ₂)
 
-  assₛₑₛ  = ?
+  assₛₑₛ σ₁ σ₂ e = {!!}
+
+  assₛₛₑ  : ∀ {Γ Δ Σ Ξ} (σ₁ : Sub Δ Γ) (σ₂ : Sub Σ Δ) (e : Ξ ⊆ Σ)
+        → (σ₁ ∘ₛ σ₂) ₛ∘ₑ e ≡ σ₁ ∘ₛ (σ₂ ₛ∘ₑ e)
+
+  assₛₛₑ  = {!!}
   ∈ₛ-ₛ∘ₑ : ∀ {τ} {Γ Δ Σ} → (x : τ ∈ Γ) → (σ : Sub Δ Γ) → (e : Σ ⊆ Δ)
         → ∈ₛ (σ ₛ∘ₑ e) x ≡ wkenTm e (∈ₛ σ x)
   ∈ₛ-ₛ∘ₑ ze (σ `, t) e     = refl
@@ -178,4 +197,18 @@ module Substitution where
 
   Term-∘ₛ : ∀ {a} {Γ Δ Σ} → (t : Term a Γ) → (σ₁ : Sub Δ Γ) → (σ₂ : Sub Σ Δ)
           → subst (σ₁ ∘ₛ σ₂) t ≡ subst σ₂ (subst σ₁ t)
-  Term-∘ₛ = {!!}
+  Term-∘ₛ unit σ₁ σ₂     = refl
+  Term-∘ₛ (`λ t) σ₁ σ₂   = cong `λ (trans (cong (λ s → subst (s `, var ze) t)
+                                   (trans (assₛₛₑ σ₁ σ₂ (drop idₑ))
+                                          (trans (cong (σ₁ ∘ₛ_)
+                                          (trans refl (sym (idlₑₛ (dropˢ σ₂)))))
+                                          (sym (assₛₑₛ σ₁ (keepˢ σ₂) (drop idₑ))))))
+                                   (Term-∘ₛ t (keepˢ σ₁) (keepˢ σ₂)))
+  Term-∘ₛ (var x) σ₁ σ₂  = {!!}
+  Term-∘ₛ (t ∙ t₁) σ₁ σ₂ = cong₂ _∙_ (Term-∘ₛ t σ₁ σ₂) (Term-∘ₛ t₁ σ₁ σ₂)
+  Term-∘ₛ (x ↑ t) σ₁ σ₂  = cong (x ↑_) (Term-∘ₛ t σ₁ σ₂)
+  Term-∘ₛ (η t) σ₁ σ₂ = cong η (Term-∘ₛ t σ₁ σ₂)
+  Term-∘ₛ (t ≫= t₁) σ₁ σ₂ = {!!}
+  Term-∘ₛ (inl t) σ₁ σ₂ = cong inl (Term-∘ₛ t σ₁ σ₂)
+  Term-∘ₛ (inr t) σ₁ σ₂ = cong inr (Term-∘ₛ t σ₁ σ₂)
+  Term-∘ₛ (case t t₁ t₂) σ₁ σ₂ = cong₃ case (Term-∘ₛ t σ₁ σ₂) {!!} {!!}

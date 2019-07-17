@@ -1,3 +1,4 @@
+{-# OPTIONS --allow-unsolved-metas #-}
 module Conversion where
 
   open import Preorder
@@ -101,8 +102,29 @@ module Conversion where
   ≡⇒≈ : ∀ {a} {Γ} {t₁ t₂ : Term a Γ} → t₁ ≡ t₂ → t₁ ≈ t₂
   ≡⇒≈ refl = ≈-refl
 
-  postulate
-    inv-subst : ∀ {Γ Δ} {a} {t₁ t₂ : Term a Γ} → {σ : Sub Δ Γ} → t₁ ≈ t₂ → subst σ t₁ ≈  subst σ t₂
+  inv-subst : ∀ {Γ Δ} {a} {t₁ t₂ : Term a Γ} → {σ : Sub Δ Γ} → t₁ ≈ t₂ → subst σ t₁ ≈  subst σ t₂
+  inv-subst {σ = σ} (⇒β {t = t} {u}) = ≈-trans ⇒β (≡⇒≈ (trans (sym (Term-∘ₛ t (keepˢ σ) (idₛ `, subst σ u)))
+                                                  (trans (cong (λ s → subst (s `, subst σ u) t) {!!}) (Term-∘ₛ t (idₛ `, u) σ))))
+  inv-subst ⇒η = ≈-trans ⇒η (`λ (≡⇒≈ {!!} ∙ ≈-refl))
+  inv-subst ⟨⟩β = {!!}
+  inv-subst ⟨⟩η = ⟨⟩η
+  inv-subst ⟨⟩γ = {!!}
+  inv-subst ↑γ₁ = ↑γ₁
+  inv-subst ↑γ₂ = ↑γ₂
+  inv-subst ↑γ₃ = ↑γ₃
+  inv-subst +η  = +η
+  inv-subst 𝟙η  = 𝟙η
+  inv-subst (x ∙ x₁) = inv-subst x ∙ inv-subst x₁
+  inv-subst (`λ x)   = `λ (inv-subst x)
+  inv-subst (η x)    = η (inv-subst x)
+  inv-subst (x ≫= x₁) = inv-subst x ≫= inv-subst x₁
+  inv-subst (c ↑ x) = c ↑ inv-subst x
+  inv-subst (inl x) = inl (inv-subst x)
+  inv-subst (inr x) = inr (inv-subst x)
+  inv-subst (case x x₁ x₂) = case (inv-subst x) (inv-subst x₁) (inv-subst x₂)
+  inv-subst ≈-refl         = ≈-refl
+  inv-subst (≈-sym x)      = ≈-sym (inv-subst x)
+  inv-subst (≈-trans x x₁) = ≈-trans (inv-subst x) (inv-subst x₁)
 
   -- weakening preserves ≈
   inv-wken : ∀ {a} {Γ} {t₁ t₂ : Term a Γ}

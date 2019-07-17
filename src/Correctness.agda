@@ -63,6 +63,7 @@ module Correctness where
     R⟨⟩ : ∀ {Γ} {a} {ℓ} → Term (⟨ ℓ ⟩ a) Γ  → 𝒞 ⟦ a ⟧ ℓ Γ → Set
     R⟨⟩ t v = R𝒞 Rl⟨⟩ t v
 
+
     R : ∀ {a} {Γ} → Term a Γ → In ⟦ a ⟧ Γ → Set
     R {𝟙}      _ _  =
       ⊤
@@ -202,15 +203,20 @@ module Correctness where
       {σ : Sub Δ Γ} {γ : ⟦ Γ ⟧ₑ .In Δ}
       → Rs σ γ
       → R (∈ₛ σ x) (lookup x γ)
-  corrLookup = {!!}
+  corrLookup {.(_ `, a)} {Δ} {a} {ze} {_ `, t} {_ , v} (_ , p)
+    = p
+  corrLookup {.(_ `, _)} {Δ} {a} {su x} {σ `, _} {γ , _} (p , _)
+    = corrLookup {x = x} p
 
   -- Dibs by Nachi
   corrUp𝒞 : ∀ {ℓᴸ ℓᴴ} {Γ} {a : Type}
           {c : ℓᴸ ⊑ ℓᴴ} {t : Term (⟨ ℓᴸ ⟩ a) Γ}
-          {v : 𝒞 ⟦ a ⟧ ℓᴸ Γ} 
+          {v : 𝒞 ⟦ a ⟧ ℓᴸ Γ}
         → R𝒞 Rl⟨⟩ t v
         → R𝒞 Rl⟨⟩ (c ↑ t) (up𝒞 c v)
-  corrUp𝒞 = {!!}
+  corrUp𝒞 {ℓᴸ} {ℓᴴ} {Γ} {a} {c} {t} {return x₁} x = {!x!}
+  corrUp𝒞 {ℓᴸ} {ℓᴴ} {Γ} {a} {c} {t} {bind x₁ x₂ v} x = {!!}
+  corrUp𝒞 {ℓᴸ} {ℓᴴ} {Γ} {a} {c} {t} {branch x₁ v v₁} x = {!!}
 
   corrEval : ∀ {Γ} {a}
     → (t : Term a Γ)
@@ -223,7 +229,10 @@ module Correctness where
             (≡⇒≈
               (trans
                 (trans (cong (λ s → subst (s `, t′) t)
-                       {!!})
+                       (trans (trans (trans (sym (idrₛ _))
+                              (trans (assₛₑₛ σ idₛ e) (cong (σ ∘ₛ_)
+                                     (sym (idlₑₛ _)))))
+                              (sym (assₛₑₛ σ (_ `, t′) (drop idₑ))))  (sym (assₛₑₛ (dropˢ σ) (idₛ `, t′) (keep e)))))
                   (Term-∘ₛ t (((dropˢ σ) ₛ∘ₑ keep e) `, (var ze)) (idₛ `, t′)))
                 (cong (subst (idₛ `, t′)) (Term-ₛ∘ₑ t (keepˢ σ) (keep e)))))
             (≈-sym ⇒β))
@@ -236,9 +245,8 @@ module Correctness where
   corrEval {Γ} {.(⟨ _ ⟩ _)} (_↑_ c t) {Δ} {σ} {γ} p =
     corrUp𝒞 {t = subst σ t} {eval t γ} (corrEval t p)
   corrEval {Γ} {.(⟨ _ ⟩ _)} (η t) {Δ} {σ} {γ} p =
-    _ , (corrEval t p , ≈-refl) 
-  corrEval {Γ} {.(⟨ _ ⟩ _)} (t ≫= t₁) {Δ} {σ} {γ} p =
-    {!!}
+    _ , (corrEval t p , ≈-refl)
+  corrEval {Γ} {.(⟨ _ ⟩ _)} (t ≫= t₁) {Δ} {σ} {γ} p = {!!}
   corrEval {Γ} {.(_ + _)} (inl t) {Δ} {σ} {γ} p =
     (subst σ t) , corrEval t p , ≈-refl
   corrEval {Γ} {.(_ + _)} (inr t) {Δ} {σ} {γ} p =
