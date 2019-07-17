@@ -61,34 +61,6 @@ module Substitution where
   Ø       ∘ₛ δ  = Ø
   (s `, t) ∘ₛ δ = (s ∘ₛ δ) `, subst δ t
 
-  idlₛ : ∀ {Γ Δ} → (σ : Sub Γ Δ) → idₛ ∘ₛ σ ≡ σ
-  idlₛ Ø        = refl
-  idlₛ (σ `, x) = {!!}
-
-  idrₛ : ∀ {Γ Δ} → (σ : Sub Γ Δ) → σ ∘ₛ idₛ ≡ σ
-  idrₛ = {!!}
-
-  assₛ : ∀ {Γ Δ Σ Ξ} → (σ₁ : Sub Δ Γ) (σ₂ : Sub Σ Δ) (σ₃ : Sub Ξ Σ)
-      → (σ₁ ∘ₛ σ₂) ∘ₛ σ₃ ≡ σ₁ ∘ₛ (σ₂ ∘ₛ σ₃)
-  assₛ = {!!}
-
-  ∈ₛ-idₛ : ∀ {Γ} {a} (x : a ∈ Γ) → ∈ₛ idₛ x ≡ var x
-  ∈ₛ-idₛ ze = refl
-  ∈ₛ-idₛ (su x) with ∈ₛ-idₛ x
-  ... | z = {!!}
-
-  subst-idₛ : ∀ {a} {Γ} → (t : Term a Γ) → subst idₛ t ≡ t
-  subst-idₛ unit = refl
-  subst-idₛ (`λ t)   = cong `λ (subst-idₛ t)
-  subst-idₛ (var x)  = ∈ₛ-idₛ x
-  subst-idₛ (t ∙ t₁) = cong₂ _∙_ (subst-idₛ t) (subst-idₛ t₁)
-  subst-idₛ (x ↑ t)  = cong (x ↑_) (subst-idₛ t)
-  subst-idₛ (η t) = cong η (subst-idₛ t)
-  subst-idₛ (t ≫= t₁) = cong₂ _≫=_ (subst-idₛ t) (subst-idₛ t₁)
-  subst-idₛ (inl t) = cong inl (subst-idₛ t)
-  subst-idₛ (inr t) = cong inr (subst-idₛ t)
-  subst-idₛ (case t t₁ t₂) = cong₃ case (subst-idₛ t) (subst-idₛ t₁) (subst-idₛ t₂)
-
   assₛₑₑ : ∀ {Γ Δ Σ Ξ} (σ : Sub Δ Γ) (e₁ : Σ ⊆ Δ) (e₂ : Ξ ⊆ Σ)
         → (σ ₛ∘ₑ e₁) ₛ∘ₑ e₂ ≡ σ ₛ∘ₑ (e₁ ∘ₑ e₂)
   assₛₑₑ Ø e₁ e₂        = refl
@@ -100,15 +72,6 @@ module Substitution where
   assₑₛₑ (σ `, x) (keep e₁) e₂ = cong (_`, wkenTm e₂ x) (assₑₛₑ σ e₁ e₂)
   assₑₛₑ (σ `, x) (drop e₁) e₂ = assₑₛₑ σ e₁ e₂
 
-  assₛₑₛ  : ∀ {Γ Δ Σ Ξ} (σ₁ : Sub Δ Γ) (σ₂ : Sub Ξ Σ) (e : Σ ⊆ Δ)
-         → (σ₁ ₛ∘ₑ e) ∘ₛ σ₂ ≡ σ₁ ∘ₛ (e ₑ∘ₛ σ₂)
-
-  assₛₑₛ σ₁ σ₂ e = {!!}
-
-  assₛₛₑ  : ∀ {Γ Δ Σ Ξ} (σ₁ : Sub Δ Γ) (σ₂ : Sub Σ Δ) (e : Ξ ⊆ Σ)
-        → (σ₁ ∘ₛ σ₂) ₛ∘ₑ e ≡ σ₁ ∘ₛ (σ₂ ₛ∘ₑ e)
-
-  assₛₛₑ  = {!!}
   ∈ₛ-ₛ∘ₑ : ∀ {τ} {Γ Δ Σ} → (x : τ ∈ Γ) → (σ : Sub Δ Γ) → (e : Σ ⊆ Δ)
         → ∈ₛ (σ ₛ∘ₑ e) x ≡ wkenTm e (∈ₛ σ x)
   ∈ₛ-ₛ∘ₑ ze (σ `, t) e     = refl
@@ -116,7 +79,8 @@ module Substitution where
 
   ∈ₛ-ₑ∘ₛ : ∀ {τ} {Γ Δ Σ} → (x : τ ∈ Γ) → (σ : Sub Σ Δ) → (e : Δ ⊆ Γ)
         → ∈ₛ (e ₑ∘ₛ σ) x ≡ ∈ₛ σ (wkenV e x)
-  ∈ₛ-ₑ∘ₛ x      (σ `, t) (drop e) = {!!} -- ∈ₛ-ₑ∘ₛ x σ e
+  ∈ₛ-ₑ∘ₛ ze (σ `, t) (drop e)     = ∈ₛ-ₑ∘ₛ ze σ e
+  ∈ₛ-ₑ∘ₛ (su x) (σ `, t) (drop e) = ∈ₛ-ₑ∘ₛ (su x) σ e
   ∈ₛ-ₑ∘ₛ ze     (σ `, t) (keep e) = refl
   ∈ₛ-ₑ∘ₛ (su x) (σ `, t) (keep e) = ∈ₛ-ₑ∘ₛ x σ e
 
@@ -171,6 +135,16 @@ module Substitution where
     (trans (cong (λ s → subst (s `, var ze) t₂) (assₑₛₑ σ e (drop idₑ)))
             (Term-ₑ∘ₛ t₂ (keepˢ σ) (keep e)))
 
+  assₛₑₛ  : ∀ {Γ Δ Σ Ξ} (σ₁ : Sub Δ Γ) (σ₂ : Sub Ξ Σ) (e : Σ ⊆ Δ)
+         → (σ₁ ₛ∘ₑ e) ∘ₛ σ₂ ≡ σ₁ ∘ₛ (e ₑ∘ₛ σ₂)
+  assₛₑₛ Ø σ₂ e         = refl
+  assₛₑₛ (σ₁ `, t) σ₂ e = cong₂ _`,_ (assₛₑₛ σ₁ σ₂ e) (sym (Term-ₑ∘ₛ t σ₂ e))
+
+  assₛₛₑ  : ∀ {Γ Δ Σ Ξ} (σ₁ : Sub Δ Γ) (σ₂ : Sub Σ Δ) (e : Ξ ⊆ Σ)
+         → (σ₁ ∘ₛ σ₂) ₛ∘ₑ e ≡ σ₁ ∘ₛ (σ₂ ₛ∘ₑ e)
+  assₛₛₑ Ø σ₂ e         = refl
+  assₛₛₑ (σ₁ `, t) σ₂ e = cong₂ _`,_ (assₛₛₑ σ₁ σ₂ e) (sym (Term-ₛ∘ₑ t σ₂ e))
+
   idlₑₛ : ∀ {Γ Δ} → (σ : Sub Δ Γ) → idₑ ₑ∘ₛ σ ≡ σ
   idlₑₛ Ø        = refl
   idlₑₛ (σ `, x) = cong (_`, x) (idlₑₛ σ)
@@ -190,10 +164,11 @@ module Substitution where
           (trans (sym (assₛₑₑ idₛ e (drop idₑ)))
                     (cong dropˢ (idlₛₑ e)))
 
-  idrₛₑ : ∀ {Γ Δ} → (e : Δ ⊆ Γ) → (e ₑ∘ₛ idₛ) ≡ ⌜ e ⌝ᵒᵖᵉ
-  idrₛₑ base     = refl
-  idrₛₑ (keep e) = {!!}
-  idrₛₑ (drop e) = {!!}
+  idrₑₛ : ∀ {Γ Δ} → (e : Δ ⊆ Γ) → (e ₑ∘ₛ idₛ) ≡ ⌜ e ⌝ᵒᵖᵉ
+  idrₑₛ base     = refl
+  idrₑₛ (keep e) = cong (_`, var ze) (trans (sym (assₑₛₑ idₛ e (drop idₑ)))
+                       (cong (_ₛ∘ₑ drop idₑ) (idrₑₛ e)))
+  idrₑₛ (drop e) = trans (sym (assₑₛₑ idₛ e (drop idₑ))) (cong dropˢ (idrₑₛ e))
 
   Term-∘ₛ : ∀ {a} {Γ Δ Σ} → (t : Term a Γ) → (σ₁ : Sub Δ Γ) → (σ₂ : Sub Σ Δ)
           → subst (σ₁ ∘ₛ σ₂) t ≡ subst σ₂ (subst σ₁ t)
@@ -212,3 +187,37 @@ module Substitution where
   Term-∘ₛ (inl t) σ₁ σ₂ = cong inl (Term-∘ₛ t σ₁ σ₂)
   Term-∘ₛ (inr t) σ₁ σ₂ = cong inr (Term-∘ₛ t σ₁ σ₂)
   Term-∘ₛ (case t t₁ t₂) σ₁ σ₂ = cong₃ case (Term-∘ₛ t σ₁ σ₂) {!!} {!!}
+
+  ∈ₛ-idₛ : ∀ {Γ} {a} (x : a ∈ Γ) → ∈ₛ idₛ x ≡ var x
+  ∈ₛ-idₛ ze      = refl
+  ∈ₛ-idₛ (su x)  = trans (∈ₛ-ₛ∘ₑ x idₛ (drop idₑ))
+                         (trans (cong (wkenTm (drop idₑ)) (∈ₛ-idₛ x))
+                                (cong (λ x → var (su x)) (wkenV-idₑ x)))
+
+  Term-idₛ : ∀ {a} {Γ} → (t : Term a Γ) → subst idₛ t ≡ t
+  Term-idₛ unit = refl
+  Term-idₛ (`λ t)   = cong `λ (Term-idₛ t)
+  Term-idₛ (var x)  = ∈ₛ-idₛ x
+  Term-idₛ (t ∙ t₁) = cong₂ _∙_ (Term-idₛ t) (Term-idₛ t₁)
+  Term-idₛ (x ↑ t)  = cong (x ↑_) (Term-idₛ t)
+  Term-idₛ (η t)    = cong η (Term-idₛ t)
+  Term-idₛ (t ≫= t₁) = cong₂ _≫=_ (Term-idₛ t) (Term-idₛ t₁)
+  Term-idₛ (inl t) = cong inl (Term-idₛ t)
+  Term-idₛ (inr t) = cong inr (Term-idₛ t)
+  Term-idₛ (case t t₁ t₂) = cong₃ case (Term-idₛ t) (Term-idₛ t₁) (Term-idₛ t₂)
+
+  idlₛ : ∀ {Γ Δ} → (σ : Sub Γ Δ) → idₛ ∘ₛ σ ≡ σ
+  idlₛ Ø        = refl
+  idlₛ (σ `, t) = cong (_`, t)
+                 (trans (assₛₑₛ idₛ (σ `, t) (drop idₑ))
+                        (trans (idlₛ _) (idlₑₛ σ)))
+
+  idrₛ : ∀ {Γ Δ} → (σ : Sub Γ Δ) → σ ∘ₛ idₛ ≡ σ
+  idrₛ Ø        = refl
+  idrₛ (σ `, t) = cong₂ _`,_ (idrₛ σ) (Term-idₛ t)
+
+  assₛ : ∀ {Γ Δ Σ Ξ} → (σ₁ : Sub Δ Γ) (σ₂ : Sub Σ Δ) (σ₃ : Sub Ξ Σ)
+      → (σ₁ ∘ₛ σ₂) ∘ₛ σ₃ ≡ σ₁ ∘ₛ (σ₂ ∘ₛ σ₃)
+  assₛ Ø σ₂ σ₃         = refl
+  assₛ (σ₁ `, t) σ₂ σ₃ = cong₂ _`,_ (assₛ σ₁ σ₂ σ₃) (sym (Term-∘ₛ t σ₂ σ₃))
+
