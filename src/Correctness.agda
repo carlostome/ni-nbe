@@ -189,6 +189,7 @@ module Correctness where
   Rs-ₛ∘ₑ {Ø} {Δ} {Σ₁} {Ø} {γ} {e} x       = x
   Rs-ₛ∘ₑ {Γ `, a} {Δ} {Σ₁} {σ `, t′} {γ , t} {e} (r₁ , r₂)
         = Rs-ₛ∘ₑ r₁ , wkPresR {t = t′} r₂
+
   ---------------------------------------------
   -- Fundamental theorem of logical relations
   ---------------------------------------------
@@ -340,7 +341,7 @@ module Correctness where
     → t ≈ qNf (reify (eval t))
   corrReify {Γ} {a} {t} f =
     corrReifyVal
-      (inv {a} {t₁ = subst idₛ t} (≡⇒≈ (subst-idₛ _) ) (f Rs-id))
+      (inv {a} {t₁ = subst idₛ t} (≡⇒≈ (Term-idₛ _) ) (f Rs-id))
 
   consistent : ∀ {Γ} {a}
     → (t : Term a Γ)

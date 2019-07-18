@@ -239,4 +239,3 @@ module Substitution where
       → (σ₁ ∘ₛ σ₂) ∘ₛ σ₃ ≡ σ₁ ∘ₛ (σ₂ ∘ₛ σ₃)
   assₛ Ø σ₂ σ₃         = refl
   assₛ (σ₁ `, t) σ₂ σ₃ = cong₂ _`,_ (assₛ σ₁ σ₂ σ₃) (sym (Term-∘ₛ t σ₂ σ₃))
-

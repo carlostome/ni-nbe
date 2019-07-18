@@ -103,12 +103,13 @@ module Conversion where
   ≡⇒≈ refl = ≈-refl
 
   inv-subst : ∀ {Γ Δ} {a} {t₁ t₂ : Term a Γ} → {σ : Sub Δ Γ} → t₁ ≈ t₂ → subst σ t₁ ≈  subst σ t₂
-  inv-subst {σ = σ} (⇒β {t = t} {u}) = ≈-trans ⇒β (≡⇒≈ (trans (sym (Term-∘ₛ t (keepˢ σ) (idₛ `, subst σ u)))
-                                                  (trans (cong (λ s → subst (s `, subst σ u) t) {!!}) (Term-∘ₛ t (idₛ `, u) σ))))
+  inv-subst {σ = σ} (⇒β {t = t} {u})
+    = ≈-trans ⇒β (≡⇒≈ (trans (sym (Term-∘ₛ t (keepˢ σ) (idₛ `, subst σ u)))
+                      (trans (cong (λ s → subst (s `, subst σ u) t) {!!}) (Term-∘ₛ t (idₛ `, u) σ))))
   inv-subst ⇒η = ≈-trans ⇒η (`λ (≡⇒≈ {!!} ∙ ≈-refl))
-  inv-subst ⟨⟩β = {!!}
+  inv-subst ⟨⟩β = ≈-trans ⟨⟩β {!!}
   inv-subst ⟨⟩η = ⟨⟩η
-  inv-subst ⟨⟩γ = {!!}
+  inv-subst ⟨⟩γ = ≈-trans ⟨⟩γ (≡⇒≈ (cong ? ?))
   inv-subst ↑γ₁ = ↑γ₁
   inv-subst ↑γ₂ = ↑γ₂
   inv-subst ↑γ₃ = ↑γ₃
@@ -134,7 +135,7 @@ module Conversion where
   inv-wken {e = e} (⇒β {t = t} {u = u})
     = ≈-trans ⇒β (≡⇒≈ (trans (trans (sym (Term-ₑ∘ₛ t (idₛ `, wkenTm e u) (keep e)))
                                           (cong (λ s → subst (s `, wkenTm e u) t)
-                                                (trans (idrₛₑ e) (sym (idlₛₑ e)))))
+                                                (trans (idrₑₛ e) (sym (idlₛₑ e)))))
                       (Term-ₛ∘ₑ t (idₛ `, u) e)))
   inv-wken {e = e} (⇒η {t = t₁})
     = ≈-trans ⇒η (≡⇒≈ (cong (λ f → `λ (f ∙ var ze))
@@ -147,7 +148,7 @@ module Conversion where
   inv-wken {e = e} (⟨⟩β {x = x} {f = f})
     = ≈-trans ⟨⟩β (≡⇒≈ (trans (trans (sym (Term-ₑ∘ₛ f (idₛ `, wkenTm e x) (keep e)))
                                           (cong (λ s → subst (s `, wkenTm e x) f)
-                                                (trans (idrₛₑ e) (sym (idlₛₑ e)))))
+                                                (trans (idrₑₛ e) (sym (idlₛₑ e)))))
                         (Term-ₛ∘ₑ f (idₛ `, x) e)))
   inv-wken ⟨⟩η       = ⟨⟩η
   inv-wken {e = e} (⟨⟩γ {t₁ = t₁} {t₂ = t₂} {t₃ = t₃})
