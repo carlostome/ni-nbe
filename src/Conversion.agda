@@ -70,9 +70,9 @@ module Conversion where
                     {t₂ : Term (⟨ ℓ ⟩ c) (Γ `, b)}
                     {u  : Term (⟨ ℓ ⟩ d) (Γ `, c)}
       → (case t t₁ t₂ ≫= u) ≈
-              case t
-                (t₁ ≫= wkenTm (keep (drop idₑ)) u)
-                (t₂ ≫= wkenTm (keep (drop idₑ)) u)
+         case t
+           (t₁ ≫= wkenTm (keep (drop idₑ)) u)
+           (t₂ ≫= wkenTm (keep (drop idₑ)) u)
      
     -- λ/ congruence
     _∙_ : ∀ {a b} {f f′ : Term (a ⇒ b) Γ} {u u′ : Term a Γ}

@@ -74,7 +74,8 @@ module Presheaf where
   bindExp𝒞 : ∀ {ℓ} {A B} → (A ⇒ᴾ 𝒞ᴾ ℓ B) →∙ (𝒞ᴾ ℓ A ⇒ᴾ 𝒞ᴾ ℓ B)
   bindExp𝒞 f e m = join𝒞 (mapExp𝒞 f e m)
 
-  -- special operation
+  -- an inlined, special case of bindExp𝒞
+  -- to ease the correctness proof of evaluation
   bindExp𝒞' : ∀ {ℓ} {A B Γ} → (A ⇒ᴾ 𝒞ᴾ ℓ B) .In Γ → (𝒞 A ℓ Γ → 𝒞 B ℓ Γ) 
   bindExp𝒞' f (return x) = f idₑ x -- f ⊆-refl x
   bindExp𝒞' f (bind p x m) = bind p x (bindExp𝒞' (λ e a → f (drop idₑ ∘ₑ e) a) m)

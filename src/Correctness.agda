@@ -232,39 +232,38 @@ module Correctness where
 
 
   corrBindExp𝒞 : ∀ {Γ} {a b} {ℓ}
-        {t  : Term (⟨ ℓ ⟩ a) Γ}
-        {v : 𝒞 ⟦ a ⟧ ℓ Γ}
-        {u : Term (⟨ ℓ ⟩ b) (Γ `, a)}
-        {f : (⟦ a ⟧ ⇒ᴾ 𝒞ᴾ ℓ ⟦ b ⟧) .In Γ}
-        → R⟨⟩ t v
+        (t  : Term (⟨ ℓ ⟩ a) Γ) (v : 𝒞 ⟦ a ⟧ ℓ Γ)
+        (u : Term (⟨ ℓ ⟩ b) (Γ `, a)) (f : (⟦ a ⟧ ⇒ᴾ 𝒞ᴾ ℓ ⟦ b ⟧) .In Γ)
+        → R⟨⟩ t v     
         → R (`λ u) f
-        → R⟨⟩
-          (t ≫= u)
-          (bindExp𝒞' f v)
-  corrBindExp𝒞 {a = a} {b} {ℓ} {t} {v = return x} {u} {f} (t' , p , q) r
+        → R⟨⟩ (t ≫= u) (bindExp𝒞' f v)
+  corrBindExp𝒞 {a = a} {b} {ℓ} t (return x) u f (t' , p , q) g
     -- key rule: ⟨⟩β ?
     = inv⟨⟩ {b} {t₂ = t ≫= u} {v = f idₑ x}
-      (≈-trans
-        ⇒β
+      (≈-trans ⇒β
         (≈-sym
-          (≈-trans
-            (q ≫= ≈-refl)
-            (≈-trans
-              ⟨⟩β
+          (≈-trans (q ≫= ≈-refl)
+            (≈-trans ⟨⟩β
               (inv-subst {t₁ = u} {t₂ = wkenTm (keep idₑ) u} {!!})))))
-              -- easy, just requires id law of Tm presheaf
-      (r idₑ p)
-  corrBindExp𝒞 {t = t} {v = bind c n v'} {u} {f} (t' , p , q) r
+              -- TBD: easy, just requires id law of Tm presheaf
+      (g idₑ p)
+  corrBindExp𝒞 {a = a} {b} t (bind c n v') u f (t' , p , q) g
     -- key rule: ⟨⟩γ
     = (t' ≫= wkenTm (keep (drop idₑ)) u)
-    , {!!} --pfft
+      -- since bindExp𝒞' over bind is pushed inside,
+      -- the induction step is on the continuation (i.e., t'/v')
+    , (corrBindExp𝒞 t' v' _ _ p
+          λ {_} {_} {vₐ} e x →
+            inv⟨⟩ {b} {v = f (drop idₑ ∘ₑ e) vₐ}
+              -- TBD: needs law about weakening with composition of embeddings
+              (`λ {!!} ∙ ≈-refl) (g (drop idₑ ∘ₑ  e) x))
     , ≈-trans (q ≫= ≈-refl) ⟨⟩γ
-  corrBindExp𝒞 {v = branch x v₁ v₂} {u} {f} (t₁ , t₂ , p , q , r) s
+  corrBindExp𝒞 t (branch x v₁ v₂) u f (t₁ , t₂ , p , q , r) g
     -- key rule: +π≫=
     = (t₁ ≫= wkenTm (keep (drop idₑ)) u)
     , (t₂ ≫= wkenTm (keep (drop idₑ)) u)
-    , {!!} --pfft
-    , {!!} --pfft
+    , {!!} -- TBD: should be similar to `bind`
+    , {!!} -- TBD: should be similar to `bind`
     , ≈-trans (r ≫= ≈-refl) +π≫=
 
   corrEval : ∀ {Γ} {a}
@@ -295,10 +294,13 @@ module Correctness where
     corrUp𝒞 {t = subst σ t} {eval t γ} (corrEval t p)
   corrEval {Γ} {.(⟨ _ ⟩ _)} (η t) {Δ} {σ} {γ} p =
     _ , (corrEval t p , ≈-refl)
-  corrEval {Γ} {.(⟨ _ ⟩ _)} (t ≫= t₁) {Δ} {σ} {γ} p =
-    corrBindExp𝒞 {t = subst σ t} {v = eval t γ} {u = subst (keepˢ σ) t₁}
-      (corrEval t p)
-      λ {Δ} {t'} {u'} e x → {!!} -- well well
+  corrEval {Γ} {(⟨ ℓ ⟩ a)} (t ≫= t₁) {Δ} {σ} {γ} p =
+    corrBindExp𝒞
+      (subst σ t) (eval t γ) _ _ (corrEval t p)
+      λ {Δ} {t'} {u'} e x →
+        inv⟨⟩ {a} {v = eval t₁ (Wken ⟦ Γ ⟧ₑ e γ , u')}
+          {!!} -- pffft, some boring eq reasoning
+          (corrEval t₁ {Δ} {σ = (σ ₛ∘ₑ e) `, t'} ({!!} , x))
 
   corrEval {Γ} {.(_ + _)} (inl t) {Δ} {σ} {γ} p =
     (subst σ t) , corrEval t p , ≈-refl
