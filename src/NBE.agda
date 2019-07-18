@@ -75,7 +75,7 @@ module NBE where
   eval (var x) γ            = lookup x γ
   eval (t ∙ u) γ            = (eval t γ) idₑ (eval u γ)
   eval (η t) γ              = return (eval t γ)
-  eval {Γ = Γ} (t ≫= m) γ  = bindExp𝒞 (λ e a → eval m (Wken ⟦ Γ ⟧ₑ e γ , a)) idₑ (eval t γ)
+  eval {Γ = Γ} (t ≫= m) γ  = bindExp𝒞' (λ e a → eval m (Wken ⟦ Γ ⟧ₑ e γ , a)) (eval t γ)
   eval (c ↑ t) γ            = up𝒞 c (eval t γ)
   eval (inl t) γ            = return (inj₁ (eval t γ))
   eval (inr t) γ            = return (inj₂ (eval t γ))

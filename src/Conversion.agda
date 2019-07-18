@@ -58,12 +58,22 @@ module Conversion where
 
     -- case permutations
 
-    +π↑ : ∀ {a b c} {ℓᴸ ℓᴴ} {p : ℓᴸ ⊑ ℓᴴ}
+    +π↑  : ∀ {a b c} {ℓᴸ ℓᴴ} {p : ℓᴸ ⊑ ℓᴴ}
                     {t  : Term (a + b) Γ}
                     {t₁ : Term (⟨ ℓᴸ ⟩ c) (Γ `, a)}
                     {t₂ : Term (⟨ ℓᴸ ⟩ c) (Γ `, b)}
       → (p ↑ case t t₁ t₂) ≈ case t (p ↑ t₁) (p ↑ t₂)
 
+    +π≫= : ∀ {a b c d} {ℓ}
+                    {t  : Term (a + b) Γ}
+                    {t₁ : Term (⟨ ℓ ⟩ c) (Γ `, a)}
+                    {t₂ : Term (⟨ ℓ ⟩ c) (Γ `, b)}
+                    {u  : Term (⟨ ℓ ⟩ d) (Γ `, c)}
+      → (case t t₁ t₂ ≫= u) ≈
+              case t
+                (t₁ ≫= wkenTm (keep (drop idₑ)) u)
+                (t₂ ≫= wkenTm (keep (drop idₑ)) u)
+     
     -- λ/ congruence
     _∙_ : ∀ {a b} {f f′ : Term (a ⇒ b) Γ} {u u′ : Term a Γ}
         → f ≈ f′
@@ -128,7 +138,8 @@ module Conversion where
   inv-subst ↑γ₄ = ↑γ₄
   inv-subst +η  = +η
   inv-subst 𝟙η  = 𝟙η
-  inv-subst +π↑ = +π↑ 
+  inv-subst +π↑ = +π↑
+  inv-subst +π≫= = {!!} -- +π≫= 
   inv-subst (x ∙ x₁) = inv-subst x ∙ inv-subst x₁
   inv-subst (`λ x)   = `λ (inv-subst x)
   inv-subst (η x)    = η (inv-subst x)
@@ -185,6 +196,7 @@ module Conversion where
   inv-wken +η             = +η
   inv-wken 𝟙η             = 𝟙η
   inv-wken +π↑            = +π↑
+  inv-wken +π≫=          = {!!}
   inv-wken ≈-refl         = ≈-refl
   inv-wken (≈-sym x)      = ≈-sym (inv-wken x)
   inv-wken (≈-trans x x₁) = ≈-trans (inv-wken x) (inv-wken x₁)

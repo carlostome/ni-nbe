@@ -230,6 +230,43 @@ module Correctness where
     , corrUp𝒞 {t = t₂} {v = v₂} q
     , ≈-trans (_ ↑ r) +π↑
 
+
+  corrBindExp𝒞 : ∀ {Γ} {a b} {ℓ}
+        {t  : Term (⟨ ℓ ⟩ a) Γ}
+        {v : 𝒞 ⟦ a ⟧ ℓ Γ}
+        {u : Term (⟨ ℓ ⟩ b) (Γ `, a)}
+        {f : (⟦ a ⟧ ⇒ᴾ 𝒞ᴾ ℓ ⟦ b ⟧) .In Γ}
+        → R⟨⟩ t v
+        → R (`λ u) f
+        → R⟨⟩
+          (t ≫= u)
+          (bindExp𝒞' f v)
+  corrBindExp𝒞 {a = a} {b} {ℓ} {t} {v = return x} {u} {f} (t' , p , q) r
+    -- key rule: ⟨⟩β ?
+    = inv⟨⟩ {b} {t₂ = t ≫= u} {v = f idₑ x}
+      (≈-trans
+        ⇒β
+        (≈-sym
+          (≈-trans
+            (q ≫= ≈-refl)
+            (≈-trans
+              ⟨⟩β
+              (inv-subst {t₁ = u} {t₂ = wkenTm (keep idₑ) u} {!!})))))
+              -- easy, just requires id law of Tm presheaf
+      (r idₑ p)
+  corrBindExp𝒞 {t = t} {v = bind c n v'} {u} {f} (t' , p , q) r
+    -- key rule: ⟨⟩γ
+    = (t' ≫= wkenTm (keep (drop idₑ)) u)
+    , {!!} --pfft
+    , ≈-trans (q ≫= ≈-refl) ⟨⟩γ
+  corrBindExp𝒞 {v = branch x v₁ v₂} {u} {f} (t₁ , t₂ , p , q , r) s
+    -- key rule: +π≫=
+    = (t₁ ≫= wkenTm (keep (drop idₑ)) u)
+    , (t₂ ≫= wkenTm (keep (drop idₑ)) u)
+    , {!!} --pfft
+    , {!!} --pfft
+    , ≈-trans (r ≫= ≈-refl) +π≫=
+
   corrEval : ∀ {Γ} {a}
     → (t : Term a Γ)
     → Fund t
@@ -258,7 +295,11 @@ module Correctness where
     corrUp𝒞 {t = subst σ t} {eval t γ} (corrEval t p)
   corrEval {Γ} {.(⟨ _ ⟩ _)} (η t) {Δ} {σ} {γ} p =
     _ , (corrEval t p , ≈-refl)
-  corrEval {Γ} {.(⟨ _ ⟩ _)} (t ≫= t₁) {Δ} {σ} {γ} p = {!!}
+  corrEval {Γ} {.(⟨ _ ⟩ _)} (t ≫= t₁) {Δ} {σ} {γ} p =
+    corrBindExp𝒞 {t = subst σ t} {v = eval t γ} {u = subst (keepˢ σ) t₁}
+      (corrEval t p)
+      λ {Δ} {t'} {u'} e x → {!!} -- well well
+
   corrEval {Γ} {.(_ + _)} (inl t) {Δ} {σ} {γ} p =
     (subst σ t) , corrEval t p , ≈-refl
   corrEval {Γ} {.(_ + _)} (inr t) {Δ} {σ} {γ} p =
