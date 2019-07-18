@@ -39,12 +39,15 @@ module Conversion where
     ↑γ₁ : ∀ {a} {ℓᴸ ℓᴴ} → {t : Term a Γ} {p : ℓᴸ ⊑ ℓᴴ}
               → (p ↑ η t) ≈ η t
 
-    ↑γ₂ : ∀ {a b} {ℓᴸ ℓᴴ} → {t₁ : Term (⟨ ℓᴸ ⟩ a) Γ} {t₂ : Term (⟨ ℓᴸ ⟩ (⟨ ℓᴸ ⟩ b)) (Γ `, a)}
+    ↑γ₂ : ∀ {a b} {ℓᴸ ℓᴴ} → {t₁ : Term (⟨ ℓᴸ ⟩ a) Γ} {t₂ : Term (⟨ ℓᴸ ⟩ b) (Γ `, a)}
                               {p : ℓᴸ ⊑ ℓᴴ} 
               → (p ↑ (t₁ ≫= t₂)) ≈ ((p ↑ t₁) ≫= (p ↑ t₂))
 
     ↑γ₃ : ∀ {a} {ℓ} → {t : Term (⟨ ℓ ⟩ a) Γ}
         → (⊑-refl ↑ t) ≈ t
+
+    ↑γ₄ : ∀ {a} {ℓᴸ ℓᴹ ℓᴴ} {t : Term (⟨ ℓᴸ ⟩ a) Γ} {p : ℓᴸ ⊑ ℓᴹ} {q : ℓᴹ ⊑ ℓᴴ }
+        → (q ↑ (p ↑ t)) ≈ (⊑-trans p q ↑ t)
 
     -- +/ reduction
     +η : ∀ {a b} {t : Term (a + b) Γ}
@@ -52,6 +55,14 @@ module Conversion where
 
     -- 𝟙/reduction
     𝟙η : ∀ {t : Term 𝟙 Γ } → t ≈ unit
+
+    -- case permutations
+
+    +π↑ : ∀ {a b c} {ℓᴸ ℓᴴ} {p : ℓᴸ ⊑ ℓᴴ}
+                    {t  : Term (a + b) Γ}
+                    {t₁ : Term (⟨ ℓᴸ ⟩ c) (Γ `, a)}
+                    {t₂ : Term (⟨ ℓᴸ ⟩ c) (Γ `, b)}
+      → (p ↑ case t t₁ t₂) ≈ case t (p ↑ t₁) (p ↑ t₂)
 
     -- λ/ congruence
     _∙_ : ∀ {a b} {f f′ : Term (a ⇒ b) Γ} {u u′ : Term a Γ}
@@ -94,6 +105,7 @@ module Conversion where
             → c₃ ≈ c₄
             → case t₁ c₁ c₃ ≈ case t₂ c₂ c₄
 
+    
     -- equivalence relation
     ≈-refl  : ∀ {a} {t : Term a Γ}                  → t ≈ t
     ≈-sym   : ∀ {a} {t t′ : Term a Γ}               → t ≈ t′ → t′ ≈ t
@@ -109,12 +121,14 @@ module Conversion where
   inv-subst ⇒η = ≈-trans ⇒η (`λ (≡⇒≈ {!!} ∙ ≈-refl))
   inv-subst ⟨⟩β = ≈-trans ⟨⟩β {!!}
   inv-subst ⟨⟩η = ⟨⟩η
-  inv-subst ⟨⟩γ = ≈-trans ⟨⟩γ (≡⇒≈ (cong ? ?))
+  inv-subst ⟨⟩γ = ≈-trans ⟨⟩γ (≡⇒≈ (cong {!!} {!!}))
   inv-subst ↑γ₁ = ↑γ₁
   inv-subst ↑γ₂ = ↑γ₂
   inv-subst ↑γ₃ = ↑γ₃
+  inv-subst ↑γ₄ = ↑γ₄
   inv-subst +η  = +η
   inv-subst 𝟙η  = 𝟙η
+  inv-subst +π↑ = +π↑ 
   inv-subst (x ∙ x₁) = inv-subst x ∙ inv-subst x₁
   inv-subst (`λ x)   = `λ (inv-subst x)
   inv-subst (η x)    = η (inv-subst x)
@@ -158,17 +172,19 @@ module Conversion where
                                                 (trans (idrₑ e) (sym (idlₑ e))))
                                                 (sym (wkenTm-∘ₑ t₃ (keep (drop idₑ))
                                                                     (keep (keep e))))))))
-  inv-wken ↑γ₁      = ↑γ₁
-  inv-wken ↑γ₂      = ↑γ₂
-  inv-wken ↑γ₃      = ↑γ₃
-  inv-wken (η x)    = η (inv-wken x)
-  inv-wken (x ≫= x₁) = (inv-wken x) ≫= (inv-wken x₁)
-  inv-wken (c ↑ x)    = c ↑ (inv-wken x)
-  inv-wken (inl x) = inl (inv-wken x)
-  inv-wken (inr x) = inr (inv-wken x)
+  inv-wken ↑γ₁            = ↑γ₁
+  inv-wken ↑γ₂            = ↑γ₂
+  inv-wken ↑γ₃            = ↑γ₃
+  inv-wken ↑γ₄            = ↑γ₄
+  inv-wken (η x)          = η (inv-wken x)
+  inv-wken (x ≫= x₁)     = (inv-wken x) ≫= (inv-wken x₁)
+  inv-wken (c ↑ x)        = c ↑ (inv-wken x)
+  inv-wken (inl x)        = inl (inv-wken x)
+  inv-wken (inr x)        = inr (inv-wken x)
   inv-wken (case x x₁ x₂) = case (inv-wken x) (inv-wken x₁) (inv-wken x₂)
-  inv-wken +η      = +η
-  inv-wken 𝟙η      = 𝟙η
-  inv-wken ≈-refl           = ≈-refl
-  inv-wken (≈-sym x)        = ≈-sym (inv-wken x)
-  inv-wken (≈-trans x x₁)   = ≈-trans (inv-wken x) (inv-wken x₁)
+  inv-wken +η             = +η
+  inv-wken 𝟙η             = 𝟙η
+  inv-wken +π↑            = +π↑
+  inv-wken ≈-refl         = ≈-refl
+  inv-wken (≈-sym x)      = ≈-sym (inv-wken x)
+  inv-wken (≈-trans x x₁) = ≈-trans (inv-wken x) (inv-wken x₁)

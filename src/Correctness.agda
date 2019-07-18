@@ -209,15 +209,26 @@ module Correctness where
   corrLookup {.(_ `, _)} {Δ} {a} {su x} {σ `, _} {γ , _} (p , _)
     = corrLookup {x = x} p
 
-  -- Dibs by Nachi
   corrUp𝒞 : ∀ {ℓᴸ ℓᴴ} {Γ} {a : Type}
           {c : ℓᴸ ⊑ ℓᴴ} {t : Term (⟨ ℓᴸ ⟩ a) Γ}
           {v : 𝒞 ⟦ a ⟧ ℓᴸ Γ}
         → R𝒞 Rl⟨⟩ t v
         → R𝒞 Rl⟨⟩ (c ↑ t) (up𝒞 c v)
-  corrUp𝒞 {ℓᴸ} {ℓᴴ} {Γ} {a} {c} {t} {return x₁} x = {!x!}
-  corrUp𝒞 {ℓᴸ} {ℓᴴ} {Γ} {a} {c} {t} {bind x₁ x₂ v} x = {!!}
-  corrUp𝒞 {ℓᴸ} {ℓᴴ} {Γ} {a} {c} {t} {branch x₁ v v₁} x = {!!}
+  corrUp𝒞 {c = c} {v = return x} (t , p , q)
+    -- key rule: ↑γ₁
+    = t , p , ≈-trans (c ↑ q) ↑γ₁
+  corrUp𝒞 {c = c} {v = bind x n v'} (t , p , q)
+    -- key rule: ↑γ₄
+    = (c ↑ t)
+    , corrUp𝒞 {t = t} {v = v'} p
+    , ≈-trans (c ↑ q) (≈-trans ↑γ₂ (↑γ₄ ≫= ≈-refl))
+  corrUp𝒞 {c = c} {v = branch x₁ v₁ v₂}  (t₁ , t₂ , p , q , r)
+    -- key rule: +π↑
+    = (c ↑ t₁)
+    , (c ↑ t₂)
+    , corrUp𝒞 {t = t₁} {v = v₁} p
+    , corrUp𝒞 {t = t₂} {v = v₂} q
+    , ≈-trans (_ ↑ r) +π↑
 
   corrEval : ∀ {Γ} {a}
     → (t : Term a Γ)
