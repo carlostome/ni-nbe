@@ -253,16 +253,24 @@ module Correctness where
       -- since bindExp𝒞' over bind is pushed inside,
       -- the induction step is on the continuation (i.e., t'/v')
     , (corrBindExp𝒞 t' v' _ _ p
-          λ {_} {_} {vₐ} e x →
-            inv⟨⟩ {b} {v = f (drop idₑ ∘ₑ e) vₐ}
-              (`λ (≡⇒≈ (sym (wkenTm-∘ₑ _ _ _))) ∙ ≈-refl) (g (drop idₑ ∘ₑ  e) x))
+         λ {_} {_} {vₐ} e x →
+           inv⟨⟩ {b} {v = f (drop idₑ ∘ₑ e) vₐ}
+             (`λ (≡⇒≈ (sym (wkenTm-∘ₑ _ _ _))) ∙ ≈-refl) (g (drop idₑ ∘ₑ  e) x))
     , ≈-trans (q ≫= ≈-refl) ⟨⟩γ
-  corrBindExp𝒞 t (branch x v₁ v₂) u f (t₁ , t₂ , p , q , r) g
+  corrBindExp𝒞 {a = a} {b} t (branch x v₁ v₂) u f (t₁ , t₂ , p , q , r) g
     -- key rule: +π≫=
     = (t₁ ≫= wkenTm (keep (drop idₑ)) u)
     , (t₂ ≫= wkenTm (keep (drop idₑ)) u)
-    , {!!} -- TBD: should be similar to `bind`
-    , {!!} -- TBD: should be similar to `bind`
+      -- identical to the induction step for `bind` 
+    , corrBindExp𝒞 t₁ v₁ _ _ p
+        (λ {_} {_} {vₐ} e x →
+          inv⟨⟩ {b} {v = f (drop idₑ ∘ₑ e) vₐ}
+            (`λ (≡⇒≈ (sym (wkenTm-∘ₑ _ _ _))) ∙ ≈-refl) (g (drop idₑ ∘ₑ  e) x))
+      -- identical to the induction step for `bind` 
+    , corrBindExp𝒞 t₂ v₂ _ _ q
+        (λ {_} {_} {vₐ} e x →
+          inv⟨⟩ {b} {v = f (drop idₑ ∘ₑ e) vₐ}
+            (`λ (≡⇒≈ (sym (wkenTm-∘ₑ _ _ _))) ∙ ≈-refl) (g (drop idₑ ∘ₑ  e) x))
     , ≈-trans (r ≫= ≈-refl) +π≫=
 
   corrEval : ∀ {Γ} {a}
@@ -288,7 +296,7 @@ module Correctness where
     corrLookup {x = x} p
   corrEval {Γ} {a} (t ∙ u) {Δ} {σ} {γ}       p =
     inv {a} ((≡⇒≈ (wkenTm-idₑ _)) ∙ ≈-refl)
-            (corrEval t p idₑ (corrEval u p))
+      (corrEval t p idₑ (corrEval u p))
   corrEval {Γ} {.(⟨ _ ⟩ _)} (_↑_ c t) {Δ} {σ} {γ} p =
     corrUp𝒞 {t = subst σ t} {eval t γ} (corrEval t p)
   corrEval {Γ} {.(⟨ _ ⟩ _)} (η t) {Δ} {σ} {γ} p =
@@ -386,7 +394,7 @@ module Correctness where
   Rs-id : ∀ {Γ} → Rs {Γ = Γ} {Δ = Γ} idₛ (idSubst Γ)
   Rs-id {Ø}      = tt
   Rs-id {Γ `, a} with Rs-id {Γ}
-  ... | p = {!Rs-id !} , (corrReflect {Γ = Γ `, a} {n = var ze})
+  ... | p = Rs-ₛ∘ₑ p , (corrReflect {Γ = Γ `, a} {n = var ze})
 
   corrReify : ∀ {Γ} {a}
     → {t : Term a Γ}
