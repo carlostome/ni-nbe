@@ -299,7 +299,7 @@ module Correctness where
       λ {Δ} {t'} {u'} e x →
         inv⟨⟩ {a} {v = eval t₁ (Wken ⟦ Γ ⟧ₑ e γ , u')}
           {!!} -- pffft, some boring eq reasoning
-          (corrEval t₁ {Δ} {σ = (σ ₛ∘ₑ e) `, t'} ({!!} , x))
+          (corrEval t₁ {Δ} {σ = (σ ₛ∘ₑ e) `, t'} (Rs-ₛ∘ₑ p , x))
 
   corrEval {Γ} {.(_ + _)} (inl t) {Δ} {σ} {γ} p =
     (subst σ t) , corrEval t p , ≈-refl
