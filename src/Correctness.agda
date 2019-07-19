@@ -244,8 +244,8 @@ module Correctness where
         (≈-sym
           (≈-trans (q ≫= ≈-refl)
             (≈-trans ⟨⟩β
-              (inv-subst {t₁ = u} {t₂ = wkenTm (keep idₑ) u} {!!})))))
-              -- TBD: easy, just requires id law of Tm presheaf
+              (inv-subst {t₁ = u} {t₂ = wkenTm (keep idₑ) u}
+                (≡⇒≈ (sym (wkenTm-idₑ _))))))))
       (g idₑ p)
   corrBindExp𝒞 {a = a} {b} t (bind c n v') u f (t' , p , q) g
     -- key rule: ⟨⟩γ
@@ -255,8 +255,7 @@ module Correctness where
     , (corrBindExp𝒞 t' v' _ _ p
           λ {_} {_} {vₐ} e x →
             inv⟨⟩ {b} {v = f (drop idₑ ∘ₑ e) vₐ}
-              -- TBD: needs law about weakening with composition of embeddings
-              (`λ {!!} ∙ ≈-refl) (g (drop idₑ ∘ₑ  e) x))
+              (`λ (≡⇒≈ (sym (wkenTm-∘ₑ _ _ _))) ∙ ≈-refl) (g (drop idₑ ∘ₑ  e) x))
     , ≈-trans (q ≫= ≈-refl) ⟨⟩γ
   corrBindExp𝒞 t (branch x v₁ v₂) u f (t₁ , t₂ , p , q , r) g
     -- key rule: +π≫=
