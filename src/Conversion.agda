@@ -13,6 +13,10 @@ module Conversion where
   open import Relation.Binary.PropositionalEquality hiding (subst)
   open import Relation.Binary.PropositionalEquality.Extra
 
+  private
+    -- sugar
+    _︔_ = trans
+ 
   data _≈_ {Γ} : ∀ {τ} → Term τ Γ → Term τ Γ → Set where
 
     -- λ/ reduction
@@ -139,7 +143,24 @@ module Conversion where
   inv-subst +η  = +η
   inv-subst 𝟙η  = 𝟙η
   inv-subst +π↑ = +π↑
-  inv-subst +π≫= = {!!} -- +π≫= 
+  inv-subst {σ = σ} (+π≫= {u = u}) 
+    = ≈-trans +π≫= (case ≈-refl
+      (≈-refl ≫= ≡⇒≈
+        (sym (Term-ₛ∘ₑ u _ _) ︔
+        (sym
+          (sym (Term-ₑ∘ₛ u _ _) ︔
+          (cong (λ σₓ → subst (σₓ `, var ze) u)
+            (idlₑₛ _ ︔
+            (assₛₑₑ σ _ _ ︔
+            (sym (assₛₑₑ σ _ _ ︔ refl)))))))) )
+      (≈-refl ≫= ≡⇒≈
+        (sym (Term-ₛ∘ₑ u _ _) ︔
+        (sym
+          (sym (Term-ₑ∘ₛ u _ _) ︔
+          (cong (λ σₓ → subst (σₓ `, var ze) u)
+            (idlₑₛ _ ︔
+            (assₛₑₑ σ _ _ ︔
+            (sym (assₛₑₑ σ _ _ ︔ refl)))))))))) 
   inv-subst (x ∙ x₁) = inv-subst x ∙ inv-subst x₁
   inv-subst (`λ x)   = `λ (inv-subst x)
   inv-subst (η x)    = η (inv-subst x)
@@ -196,7 +217,22 @@ module Conversion where
   inv-wken +η             = +η
   inv-wken 𝟙η             = 𝟙η
   inv-wken +π↑            = +π↑
-  inv-wken +π≫=          = {!!}
+  inv-wken (+π≫= {u = u})
+    = ≈-trans +π≫= (case ≈-refl
+      (≈-refl ≫= ≡⇒≈
+        (wkenTm-∘ₑ _ _ _ ︔
+        sym
+          (wkenTm-∘ₑ _ _ _ ︔
+          cong (λ eₓ → wkenTm eₓ u)
+            (cong (λ eₓ → keep (drop eₓ)) (idlₑ _) ︔
+             sym (cong (λ eₓ → keep (drop eₓ)) (idrₑ _))))))
+      ((≈-refl ≫= ≡⇒≈
+        (wkenTm-∘ₑ _ _ _ ︔
+        sym
+          (wkenTm-∘ₑ _ _ _ ︔
+          cong (λ eₓ → wkenTm eₓ u)
+            (cong (λ eₓ → keep (drop eₓ)) (idlₑ _) ︔
+             sym (cong (λ eₓ → keep (drop eₓ)) (idrₑ _))))))))
   inv-wken ≈-refl         = ≈-refl
   inv-wken (≈-sym x)      = ≈-sym (inv-wken x)
   inv-wken (≈-trans x x₁) = ≈-trans (inv-wken x) (inv-wken x₁)

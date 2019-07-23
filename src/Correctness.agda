@@ -18,6 +18,10 @@ module Correctness where
   open import Data.Unit
   open import Relation.Binary.PropositionalEquality hiding (subst)
 
+  private
+    -- sugar
+    _︔_ = trans
+    
   ----------------------
   -- Logical relations
   ----------------------
@@ -272,7 +276,7 @@ module Correctness where
           inv⟨⟩ {b} {v = f (drop idₑ ∘ₑ e) vₐ}
             (`λ (≡⇒≈ (sym (wkenTm-∘ₑ _ _ _))) ∙ ≈-refl) (g (drop idₑ ∘ₑ  e) x))
     , ≈-trans (r ≫= ≈-refl) +π≫=
-
+  
   corrEval : ∀ {Γ} {a}
     → (t : Term a Γ)
     → Fund t
@@ -315,18 +319,14 @@ module Correctness where
                 -- rewrite (wkenTm e ∘ subst σ) to subst (σ ₛ∘ₑ e)
                 (inv-subst (≡⇒≈ (sym (Term-ₛ∘ₑ t₁ _ _))))
                 -- equate the substitutions on both sides
-                (≡⇒≈ (trans
-                  (sym (Term-∘ₛ t₁ _ _))
+                (≡⇒≈
+                  (sym (Term-∘ₛ t₁ _ _) ︔
                   (cong (λ σₓ → subst (σₓ `, t') t₁)
-                      (trans
-                        (assₛₑₛ _ _ _)
-                        (trans
-                          (assₛₑₛ _ _ _)
-                          (trans
-                            (cong (σ ∘ₛ_) (idlₑₛ _))
-                            (trans
-                              (sym (assₛₑₛ σ _ e))
-                              (idrₛ _)))))))))))
+                    (assₛₑₛ _ _ _ ︔
+                    (assₛₑₛ _ _ _ ︔
+                    (cong (σ ∘ₛ_) (idlₑₛ _) ︔
+                    (sym (assₛₑₛ σ _ e) ︔
+                    (idrₛ _)))))))))))
           (corrEval t₁ {σ = (σ ₛ∘ₑ e) `, t'} (Rs-ₛ∘ₑ p , x))
           
   corrEval {Γ} {.(_ + _)} (inl t) {Δ} {σ} {γ} p =
