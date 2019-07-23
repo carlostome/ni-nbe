@@ -169,6 +169,12 @@ module Substitution where
                        (cong (_ₛ∘ₑ drop idₑ) (idrₑₛ e)))
   idrₑₛ (drop e) = trans (sym (assₑₛₑ idₛ e (drop idₑ))) (cong dropˢ (idrₑₛ e))
 
+
+ 
+  idrₛₑ : ∀ {Γ} {Δ} (σ : Sub Δ Γ) → σ ₛ∘ₑ idₑ ≡ σ
+  idrₛₑ Ø = refl
+  idrₛₑ (σ `, t) = cong₂ (_`,_) (idrₛₑ σ) (wkenTm-idₑ t)
+  
   ∈ₛ-∘ₛ : ∀ {a} {Γ Δ Σ} (σ₁ : Sub Δ Σ)(σ₂ : Sub Γ Δ) (x : a ∈ Σ)
         → ∈ₛ (σ₁ ∘ₛ σ₂) x ≡ subst σ₂ (∈ₛ σ₁ x)
   ∈ₛ-∘ₛ (σ₁ `, _) σ₂ ze = refl

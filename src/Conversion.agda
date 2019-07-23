@@ -131,11 +131,51 @@ module Conversion where
   inv-subst : ∀ {Γ Δ} {a} {t₁ t₂ : Term a Γ} → {σ : Sub Δ Γ} → t₁ ≈ t₂ → subst σ t₁ ≈  subst σ t₂
   inv-subst {σ = σ} (⇒β {t = t} {u})
     = ≈-trans ⇒β (≡⇒≈ (trans (sym (Term-∘ₛ t (keepˢ σ) (idₛ `, subst σ u)))
-                      (trans (cong (λ s → subst (s `, subst σ u) t) {!!}) (Term-∘ₛ t (idₛ `, u) σ))))
-  inv-subst ⇒η = ≈-trans ⇒η (`λ (≡⇒≈ {!!} ∙ ≈-refl))
-  inv-subst ⟨⟩β = ≈-trans ⟨⟩β {!!}
+                      (trans (cong (λ s → subst (s `, subst σ u) t) auxEqR) (Term-∘ₛ t (idₛ `, u) σ))))
+    where
+    auxEqR : (σ ₛ∘ₑ drop idₑ) ∘ₛ (idₛ `, subst σ u) ≡ idₛ ∘ₛ σ
+    auxEqR = sym
+      (idlₛ _ ︔
+      sym
+        (assₛₑₛ _ _ _ ︔
+        (sym (assₛₑₛ σ idₛ idₑ) ︔
+        (idrₛ _ ︔
+        idrₛₑ _))))
+    
+  inv-subst {a = a} {t₁ = t₁} {σ = σ} ⇒η = ≈-trans ⇒η (`λ (≡⇒≈ auxEqR ∙ ≈-refl))
+    where
+    auxEqR : ∀ {b} → wkenTm (drop {b} idₑ) (subst σ t₁)
+      ≡ subst ((σ ₛ∘ₑ drop idₑ) `, var ze) (wkenTm (drop idₑ) t₁)
+    auxEqR =
+      sym (Term-ₛ∘ₑ t₁ _ _) ︔
+      sym
+        (sym ((Term-ₑ∘ₛ t₁ _ _)) ︔
+        cong (λ σₓ → subst σₓ t₁)
+          (sym (assₑₛₑ _ idₑ _) ︔
+          cong (λ σₓ → σₓ ₛ∘ₑ drop idₑ)
+            (idlₑₛ _))) 
+  inv-subst {σ = σ} (⟨⟩β {x = x} {f = f})
+    = ≈-trans ⟨⟩β (≡⇒≈
+      (sym (Term-∘ₛ f _ _) ︔
+      sym
+        (sym (Term-∘ₛ f _ _) ︔
+        cong (λ σₓ → subst (σₓ `, subst σ x) f)
+          (idlₛ _ ︔
+          sym
+            (assₛₑₛ _ _ _ ︔
+            (sym (assₛₑₛ σ idₛ idₑ) ︔
+            (idrₛ _ ︔
+            idrₛₑ _)))))))
   inv-subst ⟨⟩η = ⟨⟩η
-  inv-subst ⟨⟩γ = ≈-trans ⟨⟩γ (≡⇒≈ (cong {!!} {!!}))
+  inv-subst (⟨⟩γ {t₃ = t₃}) = ≈-trans ⟨⟩γ (≈-refl ≫= (≈-refl ≫= ≡⇒≈
+    (sym (Term-ₛ∘ₑ t₃ _ _) ︔
+    sym
+      (sym (Term-ₑ∘ₛ t₃ _ _) ︔
+      cong (λ σₓ → subst (σₓ `, var ze) t₃)
+        (sym (assₑₛₑ _ idₑ _) ︔
+         (cong (λ σₓ → σₓ ₛ∘ₑ drop (keep idₑ)) (idlₑₛ _) ︔
+         (assₛₑₑ _ _ _ ︔
+         sym (assₛₑₑ _ _ _))))))))
   inv-subst ↑γ₁ = ↑γ₁
   inv-subst ↑γ₂ = ↑γ₂
   inv-subst ↑γ₃ = ↑γ₃
