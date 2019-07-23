@@ -304,11 +304,31 @@ module Correctness where
   corrEval {Γ} {(⟨ ℓ ⟩ a)} (t ≫= t₁) {Δ} {σ} {γ} p =
     corrBindExp𝒞
       (subst σ t) (eval t γ) _ _ (corrEval t p)
-      λ {Δ} {t'} {u'} e x →
+      λ {_} {t'} {u'} e x →
         inv⟨⟩ {a} {v = eval t₁ (Wken ⟦ Γ ⟧ₑ e γ , u')}
-          (≈-sym (≈-trans ⇒β {!!})) -- pffft, some boring eq reasoning
-          (corrEval t₁ {Δ} {σ = (σ ₛ∘ₑ e) `, t'} (Rs-ₛ∘ₑ p , x))
-
+          -- prove: subst ... t₁ ≈ (`λ (wkenTm ... (subst ... t₁)) ∙ ...)
+          (≈-sym
+            (≈-trans
+              -- reduce application, making both sides subst applications
+              ⇒β
+              (≈-trans
+                -- rewrite (wkenTm e ∘ subst σ) to subst (σ ₛ∘ₑ e)
+                (inv-subst (≡⇒≈ (sym (Term-ₛ∘ₑ t₁ _ _))))
+                -- equate the substitutions on both sides
+                (≡⇒≈ (trans
+                  (sym (Term-∘ₛ t₁ _ _))
+                  (cong (λ σₓ → subst (σₓ `, t') t₁)
+                      (trans
+                        (assₛₑₛ _ _ _)
+                        (trans
+                          (assₛₑₛ _ _ _)
+                          (trans
+                            (cong (σ ∘ₛ_) (idlₑₛ _))
+                            (trans
+                              (sym (assₛₑₛ σ _ e))
+                              (idrₛ _)))))))))))
+          (corrEval t₁ {σ = (σ ₛ∘ₑ e) `, t'} (Rs-ₛ∘ₑ p , x))
+          
   corrEval {Γ} {.(_ + _)} (inl t) {Δ} {σ} {γ} p =
     (subst σ t) , corrEval t p , ≈-refl
   corrEval {Γ} {.(_ + _)} (inr t) {Δ} {σ} {γ} p =
