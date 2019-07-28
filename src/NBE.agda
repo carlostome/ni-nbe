@@ -45,25 +45,23 @@ module NBE where
   run𝒟Nf (return x) = x
   run𝒟Nf (branch x m m₁) = case x (run𝒟Nf m) (run𝒟Nf m₁)
 
+  run𝒟⇒ : ∀ {a b} → 𝒟ᴾ ⟦ a ⇒ b ⟧ →∙ (𝒟ᴾ ⟦ a ⟧ ⇒ᴾ 𝒟ᴾ ⟦ b ⟧)
+  run𝒟⇒ (return f) e x = mapExp𝒟 f e x
+  run𝒟⇒ {a} {b} (branch n c₁ c₂) e x =
+    branch (wkenNe e n)
+      (run𝒟⇒ {a} {b} c₁ (keep e) (wken𝒟 (drop idₑ) x))
+      (run𝒟⇒ {a} {b} c₂ (keep e) (wken𝒟 (drop idₑ) x))
+
+  run𝒟𝒞 : ∀ {A} {ℓ} → 𝒟ᴾ (𝒞ᴾ ℓ A) →∙ (𝒞ᴾ ℓ A)
+  run𝒟𝒞 (return x) = x
+  run𝒟𝒞 (branch x c₁ c₂) = branch x (run𝒟𝒞 c₁) (run𝒟𝒞 c₂)
+  
   run𝒟 : ∀ {a : Type} → 𝒟ᴾ ⟦ a ⟧ →∙ ⟦ a ⟧
   run𝒟 {𝟙}      _ = tt
   run𝒟 {𝕓}      m = run𝒟Nf m
   run𝒟 {a + b}  m = join𝒟 m
-  run𝒟 {a ⇒ b}  m = λ e x → run𝒟 {b} (run𝒟⇒ m e (return x))
-    where
-    run𝒟⇒ : 𝒟ᴾ ⟦ a ⇒ b ⟧ →∙ (𝒟ᴾ ⟦ a ⟧ ⇒ᴾ 𝒟ᴾ ⟦ b ⟧)
-    run𝒟⇒ (return f) e x = mapExp𝒟 f e x
-    run𝒟⇒ (branch n c₁ c₂) e x =
-      branch (wkenNe e n)
-        (run𝒟⇒ c₁ (keep e) (wken𝒟 (drop idₑ) x))
-        (run𝒟⇒ c₂ (keep e) (wken𝒟 (drop idₑ) x))
+  run𝒟 {a ⇒ b}  m = λ e x → run𝒟 {b} (run𝒟⇒ {a} {b} m e (return x))
   run𝒟 {⟨ ℓ ⟩ a} m = run𝒟𝒞 m
-    where
-    run𝒟𝒞 : 𝒟ᴾ (𝒞ᴾ ℓ ⟦ a ⟧) →∙ (𝒞ᴾ ℓ ⟦ a ⟧)
-    run𝒟𝒞 (return x) = x
-    run𝒟𝒞 (branch x c₁ c₂) = branch x (run𝒟𝒞 c₁) (run𝒟𝒞 c₂)
-
-
 
   lookup : ∀ {a Γ} → a ∈ Γ → (⟦ Γ ⟧ₑ →∙ ⟦ a ⟧)
   lookup ze     (_ , v) = v

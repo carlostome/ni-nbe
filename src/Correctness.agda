@@ -84,6 +84,13 @@ module Correctness where
   Rs Ø        tt        = ⊤
   Rs (σ `, v) (σ' , v') = Rs σ σ' × R v v'
 
+
+  R𝒟-⟦⟧ : ∀ {Γ} {a} → Term a Γ → 𝒟 ⟦ a ⟧ Γ → Set
+  R𝒟-⟦⟧ = R𝒟 R
+
+  R𝒟-Nfᴾ : ∀ {Γ} {a} → Term a Γ → 𝒟 (Nfᴾ a) Γ → Set
+  R𝒟-Nfᴾ = R𝒟 (λ t v → t ≈ qNf v)
+
   ---------------------
   -- Invariance lemma
   ---------------------
@@ -194,16 +201,6 @@ module Correctness where
   Rs-ₛ∘ₑ {Γ `, a} {Δ} {Σ₁} {σ `, t′} {γ , t} {e} (r₁ , r₂)
         = Rs-ₛ∘ₑ r₁ , wkPresR {t = t′} r₂
 
-  ---------------------------------------------
-  -- Fundamental theorem of logical relations
-  ---------------------------------------------
-
-  Fund : ∀ {Γ} {a} (t : Term a Γ) → Set
-  Fund {Γ} {a} t =
-    ∀ {Δ} {σ : Sub Δ Γ} {γ : ⟦ Γ ⟧ₑ .In Δ}
-    → Rs σ γ
-    → R (subst σ t) (eval t γ)
-
   corrLookup : ∀ {Γ Δ} {a} {x : a ∈ Γ}
       {σ : Sub Δ Γ} {γ : ⟦ Γ ⟧ₑ .In Δ}
       → Rs σ γ
@@ -233,7 +230,6 @@ module Correctness where
     , corrUp𝒞 {t = t₁} {v = v₁} p
     , corrUp𝒞 {t = t₂} {v = v₂} q
     , ≈-trans (_ ↑ r) +π↑
-
 
   corrBindExp𝒞 : ∀ {Γ} {a b} {ℓ}
         (t  : Term (⟨ ℓ ⟩ a) Γ) (v : 𝒞 ⟦ a ⟧ ℓ Γ)
@@ -276,7 +272,53 @@ module Correctness where
           inv⟨⟩ {b} {v = f (drop idₑ ∘ₑ e) vₐ}
             (`λ (≡⇒≈ (sym (wkenTm-∘ₑ _ _ _))) ∙ ≈-refl) (g (drop idₑ ∘ₑ  e) x))
     , ≈-trans (r ≫= ≈-refl) +π≫=
-  
+
+  corrRun𝒟Nf : ∀ {Γ} {a}
+    → (t : Term a Γ) (m : 𝒟 (Nfᴾ a) Γ)
+    → R𝒟-Nfᴾ t m
+    → t ≈ qNf (run𝒟Nf m)
+  corrRun𝒟Nf t (return x)       p = p
+  corrRun𝒟Nf t (branch x m₁ m₂) (t₁ , t₂ , p , q , r)
+    = ≈-trans r (case ≈-refl (corrRun𝒟Nf _ m₁ p) (corrRun𝒟Nf _ m₂ q))
+
+  corrJoin𝒟 : ∀ {Γ} {a} {A}
+    → (t : Term a Γ) (m : 𝒟 (𝒟ᴾ A) Γ)
+    → {Rᵢ : {Δ : Ctx} → Term a Δ → In A Δ → Set}
+    → R𝒟 (R𝒟 Rᵢ) t m
+    → R𝒟 Rᵢ t (join𝒟 m)
+  corrJoin𝒟 t (return x)       p = p
+  corrJoin𝒟 t (branch x m₁ m₂) (t₁ , t₂ , p , q , r)
+    = t₁ , t₂ , (corrJoin𝒟 _ m₁ p) , (corrJoin𝒟 _ m₂ q) , r
+
+  corrRun𝒟𝒞 : ∀ {Γ} {a} {A} {ℓ}
+    → (t : Term (⟨ ℓ ⟩ a) Γ) (m : 𝒟 (𝒞ᴾ ℓ A) Γ)
+    → {Rᵢ : {Δ : Ctx} →  Term (⟨ ℓ ⟩ a) Δ → In A Δ → Set}
+    → R𝒟 (R𝒞 Rᵢ) t m
+    → R𝒞 Rᵢ t (run𝒟𝒞 m)
+  corrRun𝒟𝒞 t (return x)       p = p
+  corrRun𝒟𝒞 t (branch x m₁ m₂) (t₁ , t₂ , p , q , r)
+    = t₁ , t₂ , (corrRun𝒟𝒞 t₁ m₁ p) , (corrRun𝒟𝒞 t₂ m₂ q) , r
+
+  corrRun𝒟 : ∀ {Γ} {a}
+    → (t : Term a Γ) (v : 𝒟 ⟦ a ⟧ Γ)
+    → R𝒟-⟦⟧ t v
+    → R t (run𝒟 {a} v)
+  corrRun𝒟 {_} {𝟙}       t m p = tt
+  corrRun𝒟 {_} {𝕓}       t m p = corrRun𝒟Nf t m p
+  corrRun𝒟 {_} {a ⇒ b}   t m p = {!!}    
+  corrRun𝒟 {_} {a + b}   t m p = corrJoin𝒟 t m p
+  corrRun𝒟 {_} {⟨ ℓ ⟩ a} t m p = corrRun𝒟𝒞 t m p
+
+  ---------------------------------------------
+  -- Fundamental theorem of logical relations
+  ---------------------------------------------
+
+  Fund : ∀ {Γ} {a} (t : Term a Γ) → Set
+  Fund {Γ} {a} t =
+    ∀ {Δ} {σ : Sub Δ Γ} {γ : ⟦ Γ ⟧ₑ .In Δ}
+    → Rs σ γ
+    → R (subst σ t) (eval t γ)
+
   corrEval : ∀ {Γ} {a}
     → (t : Term a Γ)
     → Fund t
