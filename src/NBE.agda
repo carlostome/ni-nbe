@@ -46,7 +46,7 @@ module NBE where
   run𝒟Nf (branch x m m₁) = case x (run𝒟Nf m) (run𝒟Nf m₁)
 
   run𝒟⇒ : ∀ {a b} → 𝒟ᴾ ⟦ a ⇒ b ⟧ →∙ (𝒟ᴾ ⟦ a ⟧ ⇒ᴾ 𝒟ᴾ ⟦ b ⟧)
-  run𝒟⇒ (return f) e x = mapExp𝒟 f e x
+  run𝒟⇒ (return f) e x = mapExp𝒟' (λ e' → f (e ∘ₑ e')) x
   run𝒟⇒ {a} {b} (branch n c₁ c₂) e x =
     branch (wkenNe e n)
       (run𝒟⇒ {a} {b} c₁ (keep e) (wken𝒟 (drop idₑ) x))
@@ -67,6 +67,13 @@ module NBE where
   lookup ze     (_ , v) = v
   lookup (su v) (γ , _) = lookup v γ
 
+  match' : ∀ {b c a} {Δ}
+    → (⟦ b ⟧ ⇒ᴾ ⟦ a ⟧) .In Δ
+    → (⟦ c ⟧ ⇒ᴾ ⟦ a ⟧) .In Δ
+    → ((⟦ b ⟧ +ᴾ ⟦ c ⟧) ⇒ᴾ ⟦ a ⟧) .In Δ
+  match' f g e (inj₁ x) = f e x
+  match' f g e (inj₂ y) = g e y
+  
   eval : ∀ {a Γ} → Term a Γ → (⟦ Γ ⟧ₑ →∙ ⟦ a ⟧)
   eval unit _ = tt
   eval {Γ = Γ} (`λ t) γ     = λ e u → eval t (Wken ⟦ Γ ⟧ₑ e γ , u)
@@ -78,11 +85,12 @@ module NBE where
   eval (inl t) γ            = return (inj₁ (eval t γ))
   eval (inr t) γ            = return (inj₂ (eval t γ))
   eval {a} {Γ} (case {_} {b} {c} t t₁ t₂) {Δ} γ =
-    run𝒟 {a} (mapExp𝒟 match idₑ (eval t γ))
-    where
-    match : ((⟦ b ⟧ +ᴾ ⟦ c ⟧) ⇒ᴾ ⟦ a ⟧) .In Δ
-    match e (inj₁ x) = eval t₁ ((Wken ⟦ Γ ⟧ₑ e γ) , x)
-    match e (inj₂ y) = eval t₂ ((Wken ⟦ Γ ⟧ₑ e γ) , y)
+    run𝒟 {a}
+      (mapExp𝒟'
+        (match' {b} {c} {a}
+          (λ e x → eval t₁ (Wken ⟦ Γ ⟧ₑ e γ , x))
+          (λ e x → eval t₂ (Wken ⟦ Γ ⟧ₑ e γ , x)))
+        (eval t γ))
 
   mutual
 

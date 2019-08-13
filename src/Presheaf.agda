@@ -30,6 +30,9 @@ module Presheaf where
   In (P ⇒ᴾ Q) Γ             = ∀ {Δ} → Δ ⊆ Γ → P .In Δ → Q .In Δ
   (P ⇒ᴾ Q) .Wken Γ⊆Δ₁ f Δ⊆Γ = f (Γ⊆Δ₁ ∘ₑ Δ⊆Γ)
 
+  curryᴾ : ∀ {A B C : 𝒫} → ((A ×ᴾ B) →∙ C) → (A →∙ (B ⇒ᴾ C))
+  curryᴾ {A} f = λ a e b → f (Wken A e a , b)
+  
   _+ᴾ_ :  𝒫 → 𝒫 → 𝒫
   In (P +ᴾ Q) Γ    = (In P Γ) ⊎ (In Q Γ)
   (P +ᴾ Q) .Wken Γ⊆Δ = [ inj₁ ∘′ Wken P Γ⊆Δ , inj₂ ∘′ Wken Q Γ⊆Δ  ]′ 
@@ -118,5 +121,12 @@ module Presheaf where
   mapExp𝒟 f e (branch x c₁ c₂) =
     branch x (mapExp𝒟 f (drop e) c₁) (mapExp𝒟 f (drop e) c₂)
 
+  mapExp𝒟' : ∀ {A B} {Γ} → (A ⇒ᴾ B) .In Γ → 𝒟 A Γ → 𝒟 B Γ
+  mapExp𝒟' f (return x) = return (f idₑ x)
+  mapExp𝒟' f (branch x m₁ m₂) =
+    branch x
+      (mapExp𝒟' (λ e a → f (drop idₑ ∘ₑ e) a) m₁)
+      (mapExp𝒟' (λ e a → f (drop idₑ ∘ₑ e) a) m₂)
+  
   bindExp𝒟 : ∀ {A B} → (A ⇒ᴾ 𝒟ᴾ B) →∙ (𝒟ᴾ A ⇒ᴾ 𝒟ᴾ B)
   bindExp𝒟 f e m = join𝒟 (mapExp𝒟 f e m)
