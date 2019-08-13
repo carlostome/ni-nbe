@@ -25,7 +25,7 @@ Pre-print coming soon!
 
 ### Current status
 
-Work in Progress. Open goals: 5 (4 in Conversion.agda, 1 in Correctness.agda)
+Work in Progress. Open goals: 1 (in Correctness.agda)
 
 p.s. The open goal in Correctness.agda (regarding correctness of evaluation for 
-sums) is fairly standard. A similar proof for this can be found here https://github.com/nachivpn/expelim).
+sums) is a fairly standard proof. A similar proof can be found here: https://github.com/nachivpn/expelim).
