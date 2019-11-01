@@ -21,7 +21,7 @@ module Correctness where
   private
     -- sugar
     _︔_ = trans
-    
+
   ----------------------
   -- Logical relations
   ----------------------
@@ -234,7 +234,7 @@ module Correctness where
   corrBindExp𝒞 : ∀ {Γ} {a b} {ℓ}
         (t  : Term (⟨ ℓ ⟩ a) Γ) (v : 𝒞 ⟦ a ⟧ ℓ Γ)
         (u : Term (⟨ ℓ ⟩ b) (Γ `, a)) (f : (⟦ a ⟧ ⇒ᴾ 𝒞ᴾ ℓ ⟦ b ⟧) .In Γ)
-        → R⟨⟩ t v     
+        → R⟨⟩ t v
         → R (`λ u) f
         → R⟨⟩ (t ≫= u) (bindExp𝒞' f v)
   corrBindExp𝒞 {a = a} {b} {ℓ} t (return x) u f (t' , p , q) g
@@ -261,12 +261,12 @@ module Correctness where
     -- key rule: +π≫=
     = (t₁ ≫= wkenTm (keep (drop idₑ)) u)
     , (t₂ ≫= wkenTm (keep (drop idₑ)) u)
-      -- identical to the induction step for `bind` 
+      -- identical to the induction step for `bind`
     , corrBindExp𝒞 t₁ v₁ _ _ p
         (λ {_} {_} {vₐ} e x →
           inv⟨⟩ {b} {v = f (drop idₑ ∘ₑ e) vₐ}
             (`λ (≡⇒≈ (sym (wkenTm-∘ₑ _ _ _))) ∙ ≈-refl) (g (drop idₑ ∘ₑ  e) x))
-      -- identical to the induction step for `bind` 
+      -- identical to the induction step for `bind`
     , corrBindExp𝒞 t₂ v₂ _ _ q
         (λ {_} {_} {vₐ} e x →
           inv⟨⟩ {b} {v = f (drop idₑ ∘ₑ e) vₐ}
@@ -299,15 +299,81 @@ module Correctness where
   corrRun𝒟𝒞 t (branch x m₁ m₂) (t₁ , t₂ , p , q , r)
     = t₁ , t₂ , (corrRun𝒟𝒞 t₁ m₁ p) , (corrRun𝒟𝒞 t₂ m₂ q) , r
 
-  corrRun𝒟 : ∀ {Γ} {a}
-    → (t : Term a Γ) (v : 𝒟 ⟦ a ⟧ Γ)
-    → R𝒟-⟦⟧ t v
-    → R t (run𝒟 {a} v)
-  corrRun𝒟 {_} {𝟙}       t m p = tt
-  corrRun𝒟 {_} {𝕓}       t m p = corrRun𝒟Nf t m p
-  corrRun𝒟 {_} {a ⇒ b}   t m p = {!!}    
-  corrRun𝒟 {_} {a + b}   t m p = corrJoin𝒟 t m p
-  corrRun𝒟 {_} {⟨ ℓ ⟩ a} t m p = corrRun𝒟𝒞 t m p
+
+  mutual
+    corrRun𝒟⇒ : ∀ {Γ} {a b}
+      → (t : Term  (a ⇒ b) Γ) (f : 𝒟 ⟦ a ⇒ b ⟧ Γ )
+      → (u : Term a Γ)       (v : 𝒟 ⟦ a ⟧ Γ)
+      → R𝒟-⟦⟧ t f
+      → R𝒟-⟦⟧ u v
+      → R𝒟-⟦⟧ (t ∙ u) (run𝒟⇒ {a} {b} f v)
+    corrRun𝒟⇒ {Γ} {a} {b} t (return x) u v p q = inv {b}
+      (≡⇒≈ (wkenTm-idₑ _) ∙ ≈-refl)
+      (p idₑ (corrRun𝒟 u v q))
+    corrRun𝒟⇒ {Γ} {a} {b} t (branch x f₁ f₂) u v (t₁ , t₂ , p , q , r) s
+      = (t₁ ∙ wkenTm (drop idₑ) u)
+      , (t₂ ∙ wkenTm (drop idₑ) u)
+      , corrRun𝒟⇒ t₁ f₁ _ _ p {!!} -- weaken s
+      , corrRun𝒟⇒ t₂ f₂ _ _ q {!!}  -- weaken s
+      , ≈-trans (r ∙ ≈-refl) {!!} -- add rule
+
+    corrRun𝒟 : ∀ {Γ} {a}
+      → (t : Term a Γ) (v : 𝒟 ⟦ a ⟧ Γ)
+      → R𝒟-⟦⟧ t v
+      → R t (run𝒟 {a} v)
+    corrRun𝒟 {_} {𝟙}       t m p = tt
+    corrRun𝒟 {_} {𝕓}       t m p = corrRun𝒟Nf t m p
+    corrRun𝒟 {_} {a ⇒ b}   t m p {Γ} {t'} {x} =
+      λ e y → corrRun𝒟 {_} {b} (wkenTm e t ∙ t') _
+        (corrRun𝒟⇒ (wkenTm e t) (wken𝒟 e m) t' (return x) {!p!} y) -- wken p
+    corrRun𝒟 {_} {a + b}   t m p = corrJoin𝒟 t m p
+    corrRun𝒟 {_} {⟨ ℓ ⟩ a} t m p = corrRun𝒟𝒞 t m p
+
+  corrCase𝒟 : ∀ {a b c Δ}
+    (t : Term (b + c) Δ) (v : 𝒟 (⟦ b ⟧ +ᴾ ⟦ c ⟧) Δ)
+    (t₁ : Term a (Δ `, b)) (f : (⟦ b ⟧ ⇒ᴾ ⟦ a ⟧) .In Δ)
+    (t₂ : Term a (Δ `, c)) (g : (⟦ c ⟧ ⇒ᴾ ⟦ a ⟧) .In Δ)
+    → R t v
+    → R (`λ t₁) f
+    → R (`λ t₂) g
+    → R𝒟 {Δ} {a} {⟦ a ⟧} R
+         (case t t₁ t₂)
+         (case𝒟 {a} {b} {c} v f g)
+  corrCase𝒟 {a = a} t (return (inj₁ x)) t₁ f t₂ g (u , p , q) rt1f rt2g =
+    inv {a}
+      (≈-trans
+        ⇒β
+        (≈-sym (≈-trans
+          (case q ≈-refl ≈-refl)
+          (≈-trans +β₁ (≡⇒≈ ((cong (subst _) (sym (wkenTm-idₑ t₁)))))))))
+      (rt1f idₑ p)
+  corrCase𝒟 {a = a} t (return (inj₂ y)) t₁ f t₂ g (u , p , q) rt1f rt2g =
+    inv {a}
+      (≈-trans ⇒β
+        (≈-sym (≈-trans
+          (case q ≈-refl ≈-refl)
+          (≈-trans +β₂ (≡⇒≈ ((cong (subst _) (sym (wkenTm-idₑ t₂)))))))))
+      (rt2g idₑ p)
+  corrCase𝒟 {a} {b} {c} {Δ} t (branch x v₁ v₂) t₁ f t₂ g (u₁ , u₂ , p , q , r ) rt1f rt2g
+    = case u₁
+           (wkenTm (keep (drop idₑ)) t₁)
+           (wkenTm (keep (drop idₑ)) t₂)
+    , case u₂
+           (wkenTm (keep (drop idₑ)) t₁)
+           (wkenTm (keep (drop idₑ)) t₂)
+    , corrCase𝒟 u₁ v₁
+           _ (λ e → f (drop idₑ ∘ₑ e))
+           _ (λ e → g (drop idₑ ∘ₑ e))
+           p
+           (λ e r → inv {a} (`λ (≡⇒≈ (sym (wkenTm-∘ₑ _ _ _))) ∙ ≈-refl) (rt1f (drop idₑ ∘ₑ e) r))
+           (λ e r → inv {a} (`λ (≡⇒≈ (sym (wkenTm-∘ₑ _ _ _))) ∙ ≈-refl) (rt2g (drop idₑ ∘ₑ e) r))
+    , corrCase𝒟 u₂ v₂
+           _ (λ e → f (drop idₑ ∘ₑ e))
+           _ (λ e → g (drop idₑ ∘ₑ e))
+           q
+           (λ e r → inv {a} (`λ (≡⇒≈ (sym (wkenTm-∘ₑ _ _ _))) ∙ ≈-refl) (rt1f (drop idₑ ∘ₑ e) r))
+           (λ e r → inv {a} (`λ (≡⇒≈ (sym (wkenTm-∘ₑ _ _ _))) ∙ ≈-refl) (rt2g (drop idₑ ∘ₑ e) r))
+    , ≈-trans (case r ≈-refl ≈-refl) +π+
 
   ---------------------------------------------
   -- Fundamental theorem of logical relations
@@ -370,13 +436,49 @@ module Correctness where
                     (sym (assₛₑₛ σ _ e) ︔
                     (idrₛ _)))))))))))
           (corrEval t₁ {σ = (σ ₛ∘ₑ e) `, t'} (Rs-ₛ∘ₑ p , x))
-          
+
   corrEval {Γ} {.(_ + _)} (inl t) {Δ} {σ} {γ} p =
     (subst σ t) , corrEval t p , ≈-refl
   corrEval {Γ} {.(_ + _)} (inr t) {Δ} {σ} {γ} p =
     (subst σ t) , corrEval t p , ≈-refl
-  corrEval {Γ} {a} (case t t₁ t₂) {Δ} {σ} {γ} p =
-    {!!}
+  corrEval {Γ} {a} (case {_} {b} {c} t t₁ t₂) {Δ = Δ} {σ} {γ} p =
+    corrRun𝒟 {Δ} {a} _ _
+      (corrCase𝒟 (subst σ t) (eval t γ)
+        (subst (keepˢ σ) t₁) _
+        (subst (keepˢ σ) t₂) _
+        (corrEval t p)
+          (λ e q → inv {a} (≈-sym (≈-trans ⇒β
+            (≡⇒≈
+            (trans
+              (sym (Term-ₑ∘ₛ (subst (keepˢ σ) t₁) (idₛ `, _) (keep e)))
+              (trans
+                (sym (Term-∘ₛ t₁ (keepˢ σ) ((e ₑ∘ₛ idₛ) `, _)))
+                (cong (λ s → subst (s `, _) t₁)
+                (trans
+                  (assₛₑₛ _ _ _)
+                  (trans
+                    (cong (σ ∘ₛ_) (idlₑₛ _))
+                    (trans
+                      (sym (assₛₑₛ σ idₛ e))
+                      (idrₛ _))))))))))
+            (corrEval t₁ {σ = (σ ₛ∘ₑ e) `, _}
+            (Rs-ₛ∘ₑ p , q)))
+          (λ e q → inv {a} (≈-sym (≈-trans ⇒β
+             (≡⇒≈
+             (trans
+               (sym (Term-ₑ∘ₛ (subst (keepˢ σ) t₂) (idₛ `, _) (keep e)))
+               (trans
+                 (sym (Term-∘ₛ t₂ (keepˢ σ) ((e ₑ∘ₛ idₛ) `, _)))
+                 (cong (λ s → subst (s `, _) t₂)
+                 (trans
+                   (assₛₑₛ _ _ _)
+                   (trans
+                     (cong (σ ∘ₛ_) (idlₑₛ _))
+                     (trans
+                       (sym (assₛₑₛ σ idₛ e))
+                       (idrₛ _))))))))))
+            (corrEval t₂ {σ = (σ ₛ∘ₑ e) `, _}
+            (Rs-ₛ∘ₑ p , q))))
 
   ---------------------------------
   -- Correctness of normalization
@@ -407,7 +509,7 @@ module Correctness where
       , (var ze
         , (corrReflect {Γ `, a} {n = var ze}
         , ≈-refl))
-        , ≈-trans ⟨⟩η (≈-sym ↑γ₃ ≫= ≈-refl)
+        , ≈-trans ⟨⟩η ((≈-sym ↑γ₃ ≫= ≈-refl))
 
     corrReifyVal𝒞 : ∀ {Γ} {ℓ} {a} {t : Term (⟨ ℓ ⟩ a) Γ} {v : 𝒞 ⟦ a ⟧ ℓ Γ}
                   → R⟨⟩ t v

@@ -16,7 +16,7 @@ module Conversion where
   private
     -- sugar
     _︔_ = trans
- 
+
   data _≈_ {Γ} : ∀ {τ} → Term τ Γ → Term τ Γ → Set where
 
     -- λ/ reduction
@@ -44,7 +44,7 @@ module Conversion where
               → (p ↑ η t) ≈ η t
 
     ↑γ₂ : ∀ {a b} {ℓᴸ ℓᴴ} → {t₁ : Term (⟨ ℓᴸ ⟩ a) Γ} {t₂ : Term (⟨ ℓᴸ ⟩ b) (Γ `, a)}
-                              {p : ℓᴸ ⊑ ℓᴴ} 
+                              {p : ℓᴸ ⊑ ℓᴴ}
               → (p ↑ (t₁ ≫= t₂)) ≈ ((p ↑ t₁) ≫= (p ↑ t₂))
 
     ↑γ₃ : ∀ {a} {ℓ} → {t : Term (⟨ ℓ ⟩ a) Γ}
@@ -56,6 +56,12 @@ module Conversion where
     -- +/ reduction
     +η : ∀ {a b} {t : Term (a + b) Γ}
        → t ≈ case t (inl (var ze)) (inr (var ze))
+
+    +β₁ : ∀ {a b c} {t : Term a Γ} {t₁ : Term c (Γ `, a)} {t₂ : Term c (Γ `, b)}
+       → case (inl t) t₁ t₂ ≈ subst (idₛ `, t) t₁
+
+    +β₂ : ∀ {a b c} {t : Term b Γ} {t₁ : Term c (Γ `, a)} {t₂ : Term c (Γ `, b)}
+       → case (inr t) t₁ t₂ ≈ subst (idₛ `, t) t₂
 
     -- 𝟙/reduction
     𝟙η : ∀ {t : Term 𝟙 Γ } → t ≈ unit
@@ -77,7 +83,17 @@ module Conversion where
          case t
            (t₁ ≫= wkenTm (keep (drop idₑ)) u)
            (t₂ ≫= wkenTm (keep (drop idₑ)) u)
-     
+
+    +π+   : ∀ {a b c d e}
+              {t : Term (a + b) Γ}
+              {t₁ : Term (c + d) (Γ `, a)}
+              {t₂ : Term (c + d) (Γ `, b)}
+              {u₁ : Term e (Γ `, c)}
+              {u₂ : Term e (Γ `, d)}
+          → case (case t t₁ t₂) u₁ u₂ ≈
+            case t
+              (case t₁ (wkenTm (keep (drop idₑ)) u₁) (wkenTm ((keep (drop idₑ))) u₂))
+              (case t₂ (wkenTm (keep (drop idₑ)) u₁) (wkenTm ((keep (drop idₑ))) u₂))
     -- λ/ congruence
     _∙_ : ∀ {a b} {f f′ : Term (a ⇒ b) Γ} {u u′ : Term a Γ}
         → f ≈ f′
@@ -119,7 +135,7 @@ module Conversion where
             → c₃ ≈ c₄
             → case t₁ c₁ c₃ ≈ case t₂ c₂ c₄
 
-    
+
     -- equivalence relation
     ≈-refl  : ∀ {a} {t : Term a Γ}                  → t ≈ t
     ≈-sym   : ∀ {a} {t t′ : Term a Γ}               → t ≈ t′ → t′ ≈ t
@@ -141,7 +157,7 @@ module Conversion where
         (sym (assₛₑₛ σ idₛ idₑ) ︔
         (idrₛ _ ︔
         idrₛₑ _))))
-    
+
   inv-subst {a = a} {t₁ = t₁} {σ = σ} ⇒η = ≈-trans ⇒η (`λ (≡⇒≈ auxEqR ∙ ≈-refl))
     where
     auxEqR : ∀ {b} → wkenTm (drop {b} idₑ) (subst σ t₁)
@@ -153,7 +169,7 @@ module Conversion where
         cong (λ σₓ → subst σₓ t₁)
           (sym (assₑₛₑ _ idₑ _) ︔
           cong (λ σₓ → σₓ ₛ∘ₑ drop idₑ)
-            (idlₑₛ _))) 
+            (idlₑₛ _)))
   inv-subst {σ = σ} (⟨⟩β {x = x} {f = f})
     = ≈-trans ⟨⟩β (≡⇒≈
       (sym (Term-∘ₛ f _ _) ︔
@@ -183,7 +199,7 @@ module Conversion where
   inv-subst +η  = +η
   inv-subst 𝟙η  = 𝟙η
   inv-subst +π↑ = +π↑
-  inv-subst {σ = σ} (+π≫= {u = u}) 
+  inv-subst {σ = σ} (+π≫= {u = u})
     = ≈-trans +π≫= (case ≈-refl
       (≈-refl ≫= ≡⇒≈
         (sym (Term-ₛ∘ₑ u _ _) ︔
@@ -200,7 +216,7 @@ module Conversion where
           (cong (λ σₓ → subst (σₓ `, var ze) u)
             (idlₑₛ _ ︔
             (assₛₑₑ σ _ _ ︔
-            (sym (assₛₑₑ σ _ _ ︔ refl)))))))))) 
+            (sym (assₛₑₑ σ _ _ ︔ refl))))))))))
   inv-subst (x ∙ x₁) = inv-subst x ∙ inv-subst x₁
   inv-subst (`λ x)   = `λ (inv-subst x)
   inv-subst (η x)    = η (inv-subst x)
@@ -212,6 +228,7 @@ module Conversion where
   inv-subst ≈-refl         = ≈-refl
   inv-subst (≈-sym x)      = ≈-sym (inv-subst x)
   inv-subst (≈-trans x x₁) = ≈-trans (inv-subst x) (inv-subst x₁)
+  inv-subst p  = {!!}
 
   -- weakening preserves ≈
   inv-wken : ∀ {a} {Γ} {t₁ t₂ : Term a Γ}
@@ -276,3 +293,4 @@ module Conversion where
   inv-wken ≈-refl         = ≈-refl
   inv-wken (≈-sym x)      = ≈-sym (inv-wken x)
   inv-wken (≈-trans x x₁) = ≈-trans (inv-wken x) (inv-wken x₁)
+  inv-wken p = {!!}
