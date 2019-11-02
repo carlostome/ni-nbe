@@ -1,4 +1,3 @@
-{-# OPTIONS --allow-unsolved-metas #-}
 module Correctness where
 
   open import Preorder
@@ -145,6 +144,23 @@ module Correctness where
   ---------------------------------------------
 
   mutual
+    wkPresR𝒟 : ∀ {a} {A} {Γ Δ}
+            {Rl : {Δ₁ : Ctx} → Term a Δ₁ → In A Δ₁ → Set}
+            (wkPresRl : ∀ {Σ Γ} {t' : Term a Σ} {x : In A Σ}
+              {e : Γ ⊆ Σ} → Rl t' x → Rl (wkenTm e t') (Wken A e x))
+            {t :  Term a Γ} {v : 𝒟 A Γ}
+        → {e : Δ ⊆ Γ}
+        → R𝒟 Rl t v
+        → R𝒟 Rl (wkenTm e t) (wken𝒟 e v)
+    wkPresR𝒟 {a} {b} wkprl {v = return x} {e} p = wkprl {e = e} p
+    wkPresR𝒟 {a} {b} {Rl = Rl} wkprl {t} {v = branch n v₁ v₂} {e} (t₁ , t₂ , p , q , r)
+      = wkenTm (keep e) t₁
+      , (wkenTm (keep e) t₂)
+      , wkPresR𝒟 {Rl = Rl} wkprl {v = v₁} {keep e} p
+      , wkPresR𝒟 {Rl = Rl} wkprl {v = v₂} {keep e} q
+      , ≈-trans (inv-wken r) (≡⇒≈
+        (cong (λ n′ → case n′ (wkenTm (keep e) t₁) (wkenTm (keep e) t₂)) (nat-qNe n)))
+
     wkPresR₊ : ∀ {a b} {Γ Δ} {t :  Term (a + b) Γ}
             {v : 𝒟 (⟦ a ⟧ +ᴾ ⟦ b ⟧) Γ}  {e : Δ ⊆ Γ}
         → R t v
@@ -313,9 +329,9 @@ module Correctness where
     corrRun𝒟⇒ {Γ} {a} {b} t (branch x f₁ f₂) u v (t₁ , t₂ , p , q , r) s
       = (t₁ ∙ wkenTm (drop idₑ) u)
       , (t₂ ∙ wkenTm (drop idₑ) u)
-      , corrRun𝒟⇒ t₁ f₁ _ _ p {!!} -- weaken s
-      , corrRun𝒟⇒ t₂ f₂ _ _ q {!!}  -- weaken s
-      , ≈-trans (r ∙ ≈-refl) {!!} -- add rule
+      , corrRun𝒟⇒ t₁ f₁ _ _ p (wkPresR𝒟 {a} (wkPresR {a}) {v = v} s)
+      , corrRun𝒟⇒ t₂ f₂ _ _ q (wkPresR𝒟 {a} (wkPresR {a}) {v = v} s)
+      , ≈-trans (r ∙ ≈-refl) +π⇒
 
     corrRun𝒟 : ∀ {Γ} {a}
       → (t : Term a Γ) (v : 𝒟 ⟦ a ⟧ Γ)
@@ -325,7 +341,11 @@ module Correctness where
     corrRun𝒟 {_} {𝕓}       t m p = corrRun𝒟Nf t m p
     corrRun𝒟 {_} {a ⇒ b}   t m p {Γ} {t'} {x} =
       λ e y → corrRun𝒟 {_} {b} (wkenTm e t ∙ t') _
-        (corrRun𝒟⇒ (wkenTm e t) (wken𝒟 e m) t' (return x) {!p!} y) -- wken p
+        (corrRun𝒟⇒
+          (wkenTm e t)
+          (wken𝒟 e m) t'
+          (return x)
+          (wkPresR𝒟 (wkPresR {a ⇒ b}) {v = m} {e = e} p) y)
     corrRun𝒟 {_} {a + b}   t m p = corrJoin𝒟 t m p
     corrRun𝒟 {_} {⟨ ℓ ⟩ a} t m p = corrRun𝒟𝒞 t m p
 

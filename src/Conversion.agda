@@ -94,6 +94,14 @@ module Conversion where
             case t
               (case t₁ (wkenTm (keep (drop idₑ)) u₁) (wkenTm ((keep (drop idₑ))) u₂))
               (case t₂ (wkenTm (keep (drop idₑ)) u₁) (wkenTm ((keep (drop idₑ))) u₂))
+
+    +π⇒   : ∀ {a b c d}
+              {t : Term (a + b) Γ}
+              {t₁ : Term (c ⇒ d) (Γ `, a)}
+              {t₂ : Term (c ⇒ d) (Γ `, b)}
+              {u :  Term c Γ}
+          → (case t t₁ t₂ ∙ u) ≈ case t (t₁ ∙ wkenTm (drop idₑ) u) (t₂ ∙ wkenTm (drop idₑ) u)
+
     -- λ/ congruence
     _∙_ : ∀ {a b} {f f′ : Term (a ⇒ b) Γ} {u u′ : Term a Γ}
         → f ≈ f′
@@ -228,7 +236,10 @@ module Conversion where
   inv-subst ≈-refl         = ≈-refl
   inv-subst (≈-sym x)      = ≈-sym (inv-subst x)
   inv-subst (≈-trans x x₁) = ≈-trans (inv-subst x) (inv-subst x₁)
-  inv-subst p  = {!!}
+  inv-subst +β₁ = {!!}
+  inv-subst +β₂ = {!!}
+  inv-subst +π+ = {!!}
+  inv-subst +π⇒ = {!!}
 
   -- weakening preserves ≈
   inv-wken : ∀ {a} {Γ} {t₁ t₂ : Term a Γ}
@@ -293,4 +304,59 @@ module Conversion where
   inv-wken ≈-refl         = ≈-refl
   inv-wken (≈-sym x)      = ≈-sym (inv-wken x)
   inv-wken (≈-trans x x₁) = ≈-trans (inv-wken x) (inv-wken x₁)
-  inv-wken p = {!!}
+  inv-wken {e = e} (+β₁ {t = t} {t₁ = t₁}) = ≈-trans +β₁ (≡⇒≈
+    (sym
+      (Term-ₑ∘ₛ t₁ _ (keep e)) ︔
+      (cong
+        (λ s → subst ((s `, wkenTm e t)) t₁)
+          (trans (idrₑₛ e) (sym (idlₛₑ _))) ︔
+      Term-ₛ∘ₑ t₁ (idₛ `, t) e)))
+  inv-wken {e = e} (+β₂  {t = t} {t₂ = t₂}) =  ≈-trans +β₂ (≡⇒≈
+    (sym
+      (Term-ₑ∘ₛ t₂ _ (keep e)) ︔
+      (cong
+        (λ s → subst ((s `, wkenTm e t)) t₂)
+          (trans (idrₑₛ e) (sym (idlₛₑ _))) ︔
+      Term-ₛ∘ₑ t₂ (idₛ `, t) e)))
+  inv-wken (+π+ {u₁ = u₁} {u₂ = u₂}) = ≈-trans +π+ (case ≈-refl
+    (case ≈-refl
+      (≡⇒≈
+        (wkenTm-∘ₑ _ _ _ ︔
+        sym
+          (wkenTm-∘ₑ _ _ _ ︔
+          cong (λ eₓ → wkenTm eₓ u₁)
+             (cong (λ eₓ → keep (drop eₓ)) (idlₑ _) ︔
+              sym (cong (λ eₓ → keep (drop eₓ)) (idrₑ _))))))
+      (≡⇒≈
+        (wkenTm-∘ₑ _ _ _ ︔
+        sym
+          (wkenTm-∘ₑ _ _ _ ︔
+          cong (λ eₓ → wkenTm eₓ u₂)
+               (cong (λ eₓ → keep (drop eₓ)) (idlₑ _) ︔
+               sym (cong (λ eₓ → keep (drop eₓ)) (idrₑ _)))))))
+    (case ≈-refl
+      (≡⇒≈
+        (wkenTm-∘ₑ _ _ _ ︔
+        sym
+          (wkenTm-∘ₑ _ _ _ ︔
+          cong (λ eₓ → wkenTm eₓ u₁)
+             (cong (λ eₓ → keep (drop eₓ)) (idlₑ _) ︔
+              sym (cong (λ eₓ → keep (drop eₓ)) (idrₑ _))))))
+      (≡⇒≈
+        (wkenTm-∘ₑ _ _ _ ︔
+        sym
+          (wkenTm-∘ₑ _ _ _ ︔
+          cong (λ eₓ → wkenTm eₓ u₂)
+               (cong (λ eₓ → keep (drop eₓ)) (idlₑ _) ︔
+               sym (cong (λ eₓ → keep (drop eₓ)) (idrₑ _))))))))
+  inv-wken (+π⇒ {u = u}) = ≈-trans +π⇒ (case ≈-refl
+    (≈-refl ∙ (≡⇒≈
+        (wkenTm-∘ₑ _ _ _ ︔
+        sym
+          (wkenTm-∘ₑ _ _ _ ︔
+          cong₂ wkenTm (cong drop (trans (idlₑ _) (sym (idrₑ _)))) refl))))
+     (≈-refl ∙ (≡⇒≈
+        (wkenTm-∘ₑ _ _ _ ︔
+        sym
+          (wkenTm-∘ₑ _ _ _ ︔
+          cong₂ wkenTm (cong drop (trans (idlₑ _) (sym (idrₑ _)))) refl)))))
