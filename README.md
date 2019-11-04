@@ -22,10 +22,3 @@ calculus (based on the pure fragment of Haskell’s [seclib](http://hackage.hask
 using a normalization technique called _Normalization by Evaluation_ (NbE).
 
 Pre-print coming soon!
-
-### Current status
-
-Work in Progress. Open goals: 1 (in Correctness.agda)
-
-p.s. The open goal in Correctness.agda (regarding correctness of evaluation for 
-sums) is a fairly standard proof. A similar proof can be found here: https://github.com/nachivpn/expelim).
