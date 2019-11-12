@@ -268,10 +268,42 @@ module Conversion where
   inv-subst ≈-refl         = ≈-refl
   inv-subst (≈-sym x)      = ≈-sym (inv-subst x)
   inv-subst (≈-trans x x₁) = ≈-trans (inv-subst x) (inv-subst x₁)
-  inv-subst +β₁ = ≈-trans +β₁ {!!}
-  inv-subst +β₂ = {!!}
-  inv-subst +π+ = {!!}
-  inv-subst +π⇒ = {!!}
+  inv-subst {σ = σ} (+β₁ {t = t} {t₁ = t₁})
+    = ≈-trans +β₁ (≡⇒≈ (trans (trans (sym (Term-∘ₛ t₁ (keepˢ σ) (idₛ
+    `, subst σ t))) (cong (λ s → subst (s `, subst σ t) t₁) (trans
+    (assₛₑₛ σ _ _) (trans (trans (cong (σ ∘ₛ_) (idlₑₛ idₛ)) (idrₛ σ))
+    (sym (idlₛ σ)))) )) (Term-∘ₛ t₁ (idₛ `, t) σ )))
+  inv-subst {σ = σ} (+β₂ {t = t} {t₂ = t₂})
+    = ≈-trans +β₂ (≡⇒≈ ((trans (trans (sym (Term-∘ₛ t₂ (keepˢ σ) (idₛ
+    `, subst σ t))) (cong (λ s → subst (s `, subst σ t) t₂) (trans
+    (assₛₑₛ σ _ _) (trans (trans (cong (σ ∘ₛ_) (idlₑₛ idₛ)) (idrₛ σ))
+    (sym (idlₛ σ)))) )) (Term-∘ₛ t₂ (idₛ `, t) σ ))))
+  inv-subst {Γ = Γ} {Δ = Δ} {a = a} {σ = σ} (+π+ {u₁ = u₁} {u₂ = u₂})
+    = ≈-trans +π+ (case ≈-refl
+                        (case ≈-refl (aux {u = u₁}) (aux {u = u₂}))
+                        (case ≈-refl (aux {u = u₁}) (aux {u = u₂})))
+    where
+      aux : ∀ {b} {c} {u : Term a (Γ `, c)} →
+        wkenTm (keep (drop {b} idₑ)) (subst (keepˢ σ) u) ≈
+        subst (keepˢ (keepˢ σ)) (wkenTm (keep (drop idₑ)) u)
+      aux {u = u} = ≡⇒≈ (trans (sym (Term-ₛ∘ₑ u (keepˢ σ) (keep (drop idₑ))))
+                    (trans (cong (λ s → subst (s `, var ze) u)
+                    (trans (assₛₑₑ σ (drop idₑ) (keep (drop idₑ)))
+                    (trans (trans refl (sym (assₛₑₑ σ (drop idₑ)
+                    (drop (keep idₑ))))) (sym (idlₑₛ _)))))
+                    (Term-ₑ∘ₛ u (keepˢ (keepˢ σ)) (keep (drop idₑ)))))
+
+  inv-subst {Γ} {σ = σ} (+π⇒ {u = u})
+    = ≈-trans +π⇒ (case ≈-refl (≈-refl ∙ aux) (≈-refl ∙ aux))
+    where
+      aux : ∀ {b} →
+        wkenTm (drop {b} idₑ) (subst σ u) ≈
+        subst (keepˢ σ) (wkenTm (drop idₑ) u)
+      aux = ≡⇒≈ (trans (sym (Term-ₛ∘ₑ u σ (drop idₑ)))
+                (trans (cong (λ s → subst s u) (sym (idlₑₛ _)))
+                (Term-ₑ∘ₛ u (keepˢ σ) (drop idₑ)))) 
+
+
 
   -- weakening preserves ≈
   inv-wken : ∀ {a} {Γ} {t₁ t₂ : Term a Γ}
