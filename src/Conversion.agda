@@ -174,6 +174,11 @@ module Conversion where
     import Relation.Binary.SetoidReasoning as SetoidR
     open SetoidR public
 
+    infix 1 begin_
+
+    begin_ : ∀ {a : Type} {Γ : Ctx} → {t u : Term a Γ} → IsRelatedTo S t u → t ≈ u
+    begin_ p = begin⟨ S ⟩ p
+
   open SetoidUtil
 
   ≡⇒≈ : ∀ {a} {Γ} {t₁ t₂ : Term a Γ} → t₁ ≡ t₂ → t₁ ≈ t₂

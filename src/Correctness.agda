@@ -247,21 +247,32 @@ module Correctness where
     , corrUp𝒞 {t = t₂} {v = v₂} q
     , ≈-trans (_ ↑ r) +π↑
 
+  open Conversion.SetoidUtil
+
   corrBindExp𝒞 : ∀ {Γ} {a b} {ℓ}
-        (t  : Term (⟨ ℓ ⟩ a) Γ) (v : 𝒞 ⟦ a ⟧ ℓ Γ)
+        (t : Term (⟨ ℓ ⟩ a) Γ)        (v : 𝒞 ⟦ a ⟧ ℓ Γ)
         (u : Term (⟨ ℓ ⟩ b) (Γ `, a)) (f : (⟦ a ⟧ ⇒ᴾ 𝒞ᴾ ℓ ⟦ b ⟧) .In Γ)
-        → R⟨⟩ t v
+        → R t v
         → R (`λ u) f
-        → R⟨⟩ (t ≫= u) (bindExp𝒞' f v)
-  corrBindExp𝒞 {a = a} {b} {ℓ} t (return x) u f (t' , p , q) g
-    -- key rule: ⟨⟩β ?
-    = inv⟨⟩ {b} {t₂ = t ≫= u} {v = f idₑ x}
-      (≈-trans ⇒β
-        (≈-sym
-          (≈-trans (q ≫= ≈-refl)
-            (≈-trans ⟨⟩β
-              (inv-subst {t₁ = u} {t₂ = wkenTm (keep idₑ) u}
-                (≡⇒≈ (sym (wkenTm-idₑ _))))))))
+        → R (t ≫= u) (bindExp𝒞' f v)
+  corrBindExp𝒞 {b = b} t (return x) u f (t' , p , q) g
+    -- given (p : R t' x) (q : η t' ≈ t)
+    -- show: R (t ≫= u) (bindExp𝒞' f (return x))
+    -- (which we do using invariance under conversion)
+    -- key rule: ⟨⟩β
+    = inv⟨⟩ {b} {v = f idₑ x}
+        (begin
+          (`λ (wkenTm idₑ u) ∙ t')
+                  ≈⟨ ⇒β ⟩
+          subst (idₛ `, t') (wkenTm idₑ u)
+                ≈⟨ ≡⇒≈ (sym (Term-ₑ∘ₛ u _ _)) ⟩
+          subst (idₑ ₑ∘ₛ idₛ `, t') u
+                ≈⟨ ≡⇒≈ (cong (λ σ → subst (σ `, t') u) (idlₑₛ _)) ⟩
+          subst (idₛ `, t') u
+                ≈⟨ ≈-sym ⟨⟩β ⟩
+          (η t' ≫= u)
+                ≈⟨ ≈-sym q ≫= ≈-refl ⟩
+          (t ≫= u) ∎)
       (g idₑ p)
   corrBindExp𝒞 {a = a} {b} t (bind c n v') u f (t' , p , q) g
     -- key rule: ⟨⟩γ
@@ -269,9 +280,13 @@ module Correctness where
       -- since bindExp𝒞' over bind is pushed inside,
       -- the induction step is on the continuation (i.e., t'/v')
     , (corrBindExp𝒞 t' v' _ _ p
-         λ {_} {_} {vₐ} e x →
-           inv⟨⟩ {b} {v = f (drop idₑ ∘ₑ e) vₐ}
-             (`λ (≡⇒≈ (sym (wkenTm-∘ₑ _ _ _))) ∙ ≈-refl) (g (drop idₑ ∘ₑ  e) x))
+         λ e x →
+           inv⟨⟩ {b} {v = f (drop idₑ ∘ₑ e) _}
+             (begin
+               (`λ (wkenTm _ u) ∙ _)
+                    ≈⟨ `λ (≡⇒≈ (sym (wkenTm-∘ₑ _ _ _))) ∙ ≈-refl ⟩
+               (`λ (wkenTm _ (wkenTm _ u)) ∙ _) ∎ )
+         (g (drop idₑ ∘ₑ  e) x))
     , ≈-trans (q ≫= ≈-refl) ⟨⟩γ
   corrBindExp𝒞 {a = a} {b} t (branch x v₁ v₂) u f (t₁ , t₂ , p , q , r) g
     -- key rule: +π≫=
