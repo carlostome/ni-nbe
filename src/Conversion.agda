@@ -149,6 +149,33 @@ module Conversion where
     ≈-sym   : ∀ {a} {t t′ : Term a Γ}               → t ≈ t′ → t′ ≈ t
     ≈-trans : ∀ {a} {t t′ t′′ : Term a Γ}           → t ≈ t′ → t′ ≈ t′′ → t ≈ t′′
 
+  module SetoidUtil where
+
+    open import Agda.Primitive
+
+    open import Relation.Binary
+        using (Setoid ; IsEquivalence)
+
+    open Setoid
+        renaming (_≈_ to _≈ₑ_)
+        using (Carrier ; isEquivalence)
+
+    S : ∀ {a : Type} {Γ : Ctx} → Setoid lzero lzero
+    S {a} {Γ} = record
+                  { Carrier       = Term a Γ
+                  ; _≈_           = _≈_
+                  ; isEquivalence = record
+                                      { refl  = ≈-refl
+                                      ; sym   = ≈-sym
+                                      ; trans = ≈-trans
+                                      }
+                  }
+
+    import Relation.Binary.SetoidReasoning as SetoidR
+    open SetoidR public
+
+  open SetoidUtil
+
   ≡⇒≈ : ∀ {a} {Γ} {t₁ t₂ : Term a Γ} → t₁ ≡ t₂ → t₁ ≈ t₂
   ≡⇒≈ refl = ≈-refl
 
@@ -236,7 +263,7 @@ module Conversion where
   inv-subst ≈-refl         = ≈-refl
   inv-subst (≈-sym x)      = ≈-sym (inv-subst x)
   inv-subst (≈-trans x x₁) = ≈-trans (inv-subst x) (inv-subst x₁)
-  inv-subst +β₁ = {!!}
+  inv-subst +β₁ = ≈-trans +β₁ {!!}
   inv-subst +β₂ = {!!}
   inv-subst +π+ = {!!}
   inv-subst +π⇒ = {!!}
