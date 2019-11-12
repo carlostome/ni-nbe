@@ -1,4 +1,3 @@
-{-# OPTIONS --allow-unsolved-metas #-}
 module Conversion where
 
   open import Preorder
@@ -151,8 +150,6 @@ module Conversion where
 
   module SetoidUtil where
 
-    open import Agda.Primitive
-
     open import Relation.Binary
         using (Setoid ; IsEquivalence)
 
@@ -160,7 +157,7 @@ module Conversion where
         renaming (_≈_ to _≈ₑ_)
         using (Carrier ; isEquivalence)
 
-    S : ∀ {a : Type} {Γ : Ctx} → Setoid lzero lzero
+    S : ∀ {a : Type} {Γ : Ctx} → Setoid 0ℓ 0ℓ
     S {a} {Γ} = record
                   { Carrier       = Term a Γ
                   ; _≈_           = _≈_

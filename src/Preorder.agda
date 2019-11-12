@@ -1,7 +1,7 @@
 module Preorder where
 
   open import Relation.Binary
-  open import Level            using (0ℓ)
+  open import Level            using (0ℓ) public
 
   postulate
     Label   : Set

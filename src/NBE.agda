@@ -9,14 +9,14 @@ module NBE where
   open import NormalForm
   open import Presheaf
 
-  open import Relation.Binary.PropositionalEquality hiding (subst) renaming (trans to ≡-trans; sym to ≡-sym; refl to ≡-refl)
+  open import Relation.Binary.PropositionalEquality
+    hiding (subst) renaming (trans to ≡-trans; sym to ≡-sym; refl to ≡-refl)
   open import Relation.Binary.PropositionalEquality.Extra
   open import Data.Product
   open import Data.Unit hiding (_≤_)
   open import Data.Sum
     using (_⊎_ ; inj₁ ; inj₂ ; [_,_]′)
   open import Function using (_∘′_)
-
 
   Termᴾ : Type → 𝒫
   Termᴾ τ = record { In = Term τ ; Wken = wkenTm }
@@ -34,7 +34,7 @@ module NBE where
   ⟦ 𝟙  ⟧        = 𝟙ᴾ
   ⟦ 𝕓 ⟧         = 𝕓ᴾ
   ⟦ a ⇒ b ⟧     = ⟦ a ⟧ ⇒ᴾ  ⟦ b ⟧
-  ⟦ ⟨ ℓ ⟩ a ⟧  = 𝒞ᴾ ℓ ⟦ a ⟧
+  ⟦ ⟨ ℓ ⟩ a ⟧   = 𝒞ᴾ ℓ ⟦ a ⟧
   ⟦ a + b ⟧     = 𝒟ᴾ (⟦ a ⟧ +ᴾ ⟦ b ⟧)
 
   ⟦_⟧ₑ : Ctx → 𝒫
