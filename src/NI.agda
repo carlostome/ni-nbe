@@ -223,3 +223,14 @@ module NI where
     with NI-Prot ¬ℓᴴ⊑ℓᴸ (subst σₗ t) σₕ₁ σₕ₂ pr gr tr
   ... | p = ≈-trans (≡⇒≈ (Term-∘ₛ t σₗ σₕ₁))
                     (≈-trans p (≡⇒≈ (sym (Term-∘ₛ t σₗ σₕ₂))))
+
+  open import Security.LowEq
+
+  NI' : ∀ {Δ Γ} {a} {ℓᴸ ℓᴴ}
+      → ¬ (ℓᴴ ⊑ ℓᴸ)
+      → (t     : Term a Γ)
+      → (σ₁ σ₂ : Sub Δ Γ)
+      → σ₁ ≡ₛ〈 ℓᴸ 〉   σ₂
+      → Ground a → Tr a ℓᴸ
+      → subst σ₁ t ≡〈 ℓᴸ 〉 subst σ₂ t
+  NI' x t σ₁ σ₂ leq gr tr = {!!}
