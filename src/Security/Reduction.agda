@@ -1,5 +1,8 @@
 module Security.Reduction where
 
+open import Data.Unit using (⊤ ; tt)
+open import Data.Empty using (⊥ ; ⊥-elim)
+
 open import Type
 open import Variable
 open import Term
@@ -10,9 +13,6 @@ variable
   a b c : Type
   ℓ ℓ'  : Label
   Γ Δ   : Ctx
-
-open import Data.Unit using (⊤ ; tt)
-open import Data.Empty using (⊥)
 
 isValue : Term a Γ → Set
 isValue unit     = ⊤
@@ -80,32 +80,36 @@ data _⟶_ : Term a Γ → Term a Γ → Set where
 
   ξ-↑  : {t t' : Term (⟨ ℓ ⟩ a) Γ} {p : ℓ ⊑ ℓ'}
     → t ⟶ t'
-    -------------------------
+    ----------------------
     → (p ↑ t) ⟶ (p ↑ t')
 
   red-↑ : {t : Term a Γ} {p : ℓ ⊑ ℓ'}
+    → (v : isValue t)
     → (p ↑ η t) ⟶ η t
 
   ξ-η : {t t' : Term a Γ}
     → t ⟶ t'
+    -----------------
     → η {ℓ} t ⟶ η t'
 
   ξ-inl : {t t' : Term a Γ}
     → t ⟶ t'
+    -----------------------------
     → inl {_} {a} {b} t ⟶ inl t'
 
   ξ-inr : {t t' : Term a Γ}
     → t ⟶ t'
+    -----------------------------
     → inr {_} {b} {a} t ⟶ inr t'
 
 data _⟶*_ : (Term a Γ) → (Term a Γ) → Set where
 
-  refl : (t : Term a Γ)
-       ------
+  refl : {t : Term a Γ}
+       ----------------
      → t ⟶* t
 
-  trans : (t t' u : Term a Γ)
-     → t  ⟶* t'
+  trans : {t t' u : Term a Γ}
+     → t  ⟶ t'
      → t' ⟶* u
      -----------
      → t  ⟶* u
@@ -113,6 +117,8 @@ data _⟶*_ : (Term a Γ) → (Term a Γ) → Set where
 module _ where
 
   open import Relation.Nullary using (¬_)
+  open import Data.Sum using (_⊎_)
+    renaming (inj₁ to done ; inj₂ to step)
 
   -- values don't reduce
   val¬⟶ : (t : Term a Γ) → isValue t → {t' : Term a Γ} → ¬ (t ⟶ t')
@@ -122,13 +128,11 @@ module _ where
   val¬⟶ (inl t) x = λ { (ξ-inl p) → val¬⟶ t x p }
   val¬⟶ (inr t) x = λ { (ξ-inr p) → val¬⟶ t x p }
 
-  open import Data.Sum using (_⊎_)
-    renaming (inj₁ to done ; inj₂ to step)
-
+  -- progression to a value
   Progress : Term a Γ → Set
   Progress t = (isValue t) ⊎ (∃ λ t' → t ⟶ t')
 
-  -- a closed term makes progress
+  -- a closed term progresses to a value
   progress : (t : Term a Ø) → Progress t
   progress unit     = done tt
   progress (`λ t)   = done tt
@@ -139,7 +143,7 @@ module _ where
   ... | step (u' , s) = step (`λ t ∙ u' , ξ-∙₂ v s)
   progress (t    ∙ u) | step (t' , s) = step (t' ∙ u , ξ-∙₁ s)
   progress (p ↑ t)  with progress t
-  progress (p ↑ η t) | done v = step (η t , red-↑)
+  progress (p ↑ η t) | done v = step (η t , red-↑ v)
   progress (p ↑ t)   | step (t' , s) = step (p ↑ t' , ξ-↑ s)
   progress (η t) with progress t
   progress (η t) | done x = done x
@@ -157,3 +161,48 @@ module _ where
   progress (case (inl t) t₁ t₂) | done x = step (subst (Ø `, t) t₁ , red-case₁ x)
   progress (case (inr t) t₁ t₂) | done x = step (subst (Ø `, t) t₂ , red-case₂ x)
   progress (case t t₁ t₂)       | step (t' , s) = step (case t' t₁ t₂ , ξ-case s)
+
+open import Relation.Binary.PropositionalEquality using (_≡_ ; cong ; cong₂ ; refl)
+
+-- reduction is deterministic
+det : {t u u' : Term a Γ} → (t ⟶ u) → (t ⟶ u') → u ≡ u'
+det (ξ-∙₁ s) (ξ-∙₁ s') = cong₂ _∙_ (det s s') refl
+det (ξ-∙₁ s) (ξ-∙₂ v s') = ⊥-elim (val¬⟶ _ v s)
+det (ξ-∙₂ v s) (ξ-∙₁ s') = ⊥-elim (val¬⟶ _ v s')
+det (ξ-∙₂ v s) (ξ-∙₂ v' s') = cong₂ _∙_ refl (det s s')
+det (ξ-∙₂ v s) (red-λ v') = ⊥-elim (val¬⟶ _ v' s)
+det (red-λ v) (ξ-∙₂ v s') = ⊥-elim (val¬⟶ _ v s')
+det (red-λ v) (red-λ v₁) = refl
+det (ξ-≫= s) (ξ-≫= s') = cong₂ _≫=_ (det s s') refl
+det (ξ-≫= s) (red-≫= v) = ⊥-elim (val¬⟶ _ v s)
+det (red-≫= v) (ξ-≫= s') = ⊥-elim (val¬⟶ _ v s')
+det (red-≫= v) (red-≫= v₁) = refl
+det (ξ-case s) (ξ-case s') = cong (λ x → case x _ _) (det s s')
+det (ξ-case s) (red-case₁ v) = ⊥-elim (val¬⟶ _ v s)
+det (ξ-case s) (red-case₂ v) = ⊥-elim (val¬⟶ _ v s)
+det (red-case₁ v) (ξ-case s') = ⊥-elim (val¬⟶ _ v s')
+det (red-case₁ v) (red-case₁ v') = refl
+det (red-case₂ v) (ξ-case s') = ⊥-elim (val¬⟶ _ v s')
+det (red-case₂ v) (red-case₂ v') = refl
+det (ξ-↑ s) (ξ-↑ s') = cong (_ ↑_) (det s s')
+det (ξ-↑ s) (red-↑ v) = ⊥-elim (val¬⟶ _ v s)
+det (red-↑ v) (ξ-↑ s') = ⊥-elim (val¬⟶ _ v s')
+det (red-↑ v) (red-↑ v') = refl
+det (ξ-η s) (ξ-η s') = cong η (det s s')
+det (ξ-inl s) (ξ-inl s') = cong inl (det s s')
+det (ξ-inr s) (ξ-inr s') = cong inr (det s s')
+
+church-rosser : {t u₁ u₂ : Term a Γ} →
+  (t ⟶* u₁) → (t ⟶* u₂) → ∃ λ u → (u₁ ⟶* u) × (u₂ ⟶* u)
+church-rosser (refl) q            = _ , q , refl
+church-rosser (trans p₁ p₂) (refl) = _ , refl , trans p₁ p₂
+church-rosser (trans p₁ p₂) (trans q₁ q₂) with det p₁ q₁
+... | refl = church-rosser p₂ q₂
+
+open import Security.LowEq using (_≡〈_〉_)
+
+reduction-preserves-≡〈〉 : {t t' u u' : Term a Γ}
+  → t ≡〈 ℓ 〉 t'
+  → t  ⟶ u
+  → t' ⟶ u'
+  → u ≡〈 ℓ 〉 u'
