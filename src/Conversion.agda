@@ -168,7 +168,7 @@ module Conversion where
                                       }
                   }
 
-    import Relation.Binary.SetoidReasoning as SetoidR
+    import Relation.Binary.Reasoning.MultiSetoid as SetoidR
     open SetoidR public
 
     infix 1 begin_
